@@ -11,7 +11,6 @@
 #' library(dplyr)
 #' library(kableExtra)
 #' library(tibble)
-#' kbl_descV1(mtcars)
 #' }
 #' @export
 kbl_descV1 <- function(df) {
@@ -48,7 +47,6 @@ kbl_descV1 <- function(df) {
 #' library(dplyr)
 #' library(kableExtra)
 #' library(tibble)
-#' kbl_descV2(mtcars)
 #' }
 #' @export
 kbl_descV2 <- function(df) {
