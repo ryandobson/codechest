@@ -17,6 +17,7 @@ hello <- function() {
   print("Hello, world!")
 }
 
+getwd()
 
 Sys.getenv("PATH")
 
