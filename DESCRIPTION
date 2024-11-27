@@ -1,11 +1,18 @@
 Package: codechest
 Type: Package
-Title: What the Package Does (Title Case)
+Title: A Collection of my Personal R Functions for Data Analysis
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Authors@R: 
+    person("Ryan", "Dobson", email = "rdobson17@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0002-4928-721X"))
+Description: The `codechest` package provides a suite of reusable R functions for data analysis, 
+    visualization, and reporting. It is designed to streamline common workflows, 
+    improve efficiency, and promote reproducibility in R-based projects.
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+URL: https://github.com/ryandobson/codechest
+BugReports: https://github.com
+
