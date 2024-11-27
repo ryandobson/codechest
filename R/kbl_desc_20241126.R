@@ -7,7 +7,6 @@
 #' @return A styled HTML table summarizing the descriptive statistics.
 #' @importFrom stats mad median
 #' @importFrom dplyr across where
-#' @importFrom tibble rowname_to_column
 #' @importFrom psych describe
 #' @importFrom kableExtra cell_spec kbl kable_paper
 #' @examples
