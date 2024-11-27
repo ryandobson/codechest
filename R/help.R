@@ -1,6 +1,15 @@
 
 #library(devtools)
 
+#R.Version()
+#> Checking System Updates:
+# devtools::dev_sitrep()
+
+#> Checing if Rtools path is working properly:
+#Sys.getenv("PATH")
+#Sys.which("gcc")
+
+
 #> CAUTION:
 #> If you use devtool functions in the script it will result in infinite recurions
 #> because most calls are referencing the package script, which now also includes
