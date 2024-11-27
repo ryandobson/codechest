@@ -22,4 +22,5 @@ Imports:
     dplyr,
     kableExtra,
     psych,
-    tibble
+    tibble,
+    stats
