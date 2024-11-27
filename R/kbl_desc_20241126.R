@@ -34,5 +34,7 @@ kbl_descV1 <- function(df) {
 
   return(kbl_desc)
 }
+#> Creating global variable names for the kbl_desc result columns:
+utils::globalVariables(c("vars", "mad", "median", "rowname", "skew", "kurtosis"))
 
 

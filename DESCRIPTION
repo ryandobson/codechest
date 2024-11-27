@@ -23,4 +23,5 @@ Imports:
     kableExtra,
     psych,
     tibble,
-    stats
+    stats,
+    utils
