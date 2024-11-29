@@ -23,3 +23,5 @@ Imports:
     kableExtra,
     psych,
     tibble
+Depends: 
+    R (>= 3.5)
