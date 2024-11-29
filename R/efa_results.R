@@ -37,7 +37,6 @@ utils::globalVariables(c("as_tibble", "fa", "fac_extrac_fun", "kable_paper",
 #' @import tibble
 #' @import kableExtra
 #' @importFrom psych fa
-#' @importFrom dplyr rownames_to_column
 #' @export
 
 efa_results <- function(fa_df, n_factors) {

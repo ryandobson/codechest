@@ -1,12 +1,9 @@
 ## code to prepare `ryanhonorthesis` dataset goes here
-#' @source Data collected in fall 2022 for Ryan Dobson's undergrad honors thesis on
-#' jealousy in opposite-sex friendships
-#' @format Data are in wide format where the scenario people are responding to emotions
-#' on is depicted by "osf." ssf." or "rom." as a variable prefix.
 
-usethis::use_data(ryanhonorthesis, overwrite = TRUE)
 
-ryanhonorthesis |>
+ryanhonorthesis <- read.csv("data-raw/raw_osf_thesis_data.csv")
+
+ryanhonorthesis <- ryanhonorthesis |>
   rename_all(tolower) |>  #renaming all to lowercase for ease of editing
   select(
     -meeting.type:-email.communication.type #removing some variables I don't plan to analyze
@@ -53,3 +50,7 @@ ryanhonorthesis |>
     -osf.closer.ssf, -sexual.orientation.friend, -sexual.orientation.participant,
     -relationship.status.participant
   )
+
+
+usethis::use_data(ryanhonorthesis, overwrite = TRUE)
+

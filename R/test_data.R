@@ -63,7 +63,7 @@
 #>than NAMESPACE, but the details are not important).
 #>This means they must be documented.
 #>Instead of documenting the data directly, you document the name of the dataset
-#>and save it i R/
+#>and save it in R/
 #>Two important roxygen tags:
 #>@format gives an overview of the dataset. For data frames, you should include a
 #>definition list that describes each variable. Usually a good idea to describe
