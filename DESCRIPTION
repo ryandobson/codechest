@@ -22,6 +22,7 @@ Imports:
     dplyr,
     kableExtra,
     psych,
-    tibble
+    tibble,
+    ggplot2
 Depends: 
     R (>= 3.5)
