@@ -23,6 +23,9 @@ Imports:
     kableExtra,
     psych,
     tibble,
-    ggplot2
+    ggplot2,
+    DescTools,
+    stringr,
+    rlang
 Depends: 
     R (>= 3.5)
