@@ -51,7 +51,8 @@ efa_results <- function(fa_df, n_factors) {
 
   if (n_factors == 1) {  # Only printing this if there is 1 factor
     extract_info <- fac_extrac_fun(fa_df, 1, model_name, "ml", "promax")
-    print(extract_info)
+    scree_plot <- extract_info$'Scree Plot'
+    #print(extract_info)
   }
 
   pm_fun_1 <- function(model_name, n_factors) {
@@ -168,7 +169,8 @@ efa_results <- function(fa_df, n_factors) {
     "com_mean" = com_mean,
     "com_min" = com_min,
     "com_max" = com_max,
-    "coms" = nice_coms
+    "coms" = nice_coms,
+    "scree_plot" = scree_plot
   )
 
   return(final) # Returns the efa model to the global environment
