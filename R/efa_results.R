@@ -269,4 +269,72 @@ fac_extrac_fun <- function(df, nfactors, efa_model, estimation_meth, rotation_me
 
 
 
+#' Function for Various Tests of Matrix Suitability for Factor Analysis
+#'
+#' This function runs two tests—Kaiser-Meyer-Olkin (KMO) and Bartlett's Test of Sphericity—
+#' to assess the suitability of a correlation matrix for factor analysis (FA).
+#' The KMO test checks the sampling adequacy, and Bartlett's test checks the
+#' hypothesis that the correlation matrix is an identity matrix (which would suggest
+#' that factor analysis is inappropriate).
+#'
+#' @param df A numeric data frame or matrix where each column represents a variable.
+#' The function will perform the KMO test and Bartlett’s test on this data.
+#'
+#' @return A list containing:
+#' \describe{
+#'   \item{KMO test statistic}{The overall KMO statistic assessing sampling adequacy.}
+#'   \item{KMO minimum value}{The minimum MSA (measure of sampling adequacy) value across the variables.}
+#'   \item{Bartlett Test of Sphericity P-value}{The p-value from Bartlett's test, used to determine
+#'         if the correlation matrix is significantly different from an identity matrix.}
+#'   \item{Bartlett Chi-Square Value}{The chi-square value from Bartlett’s test.}
+#'   \item{Bartlett Degrees of Freedom}{The degrees of freedom for the Bartlett test.}
+#'   \item{KMO Values < .70}{A vector of the variable names where the MSA value is below 0.70, which
+#'         indicates that the variables may not be suitable for factor analysis.}
+#' }
+#'
+#' @details
+#' The KMO test checks the adequacy of the sample for factor analysis. A KMO value greater than 0.70 is considered
+#' acceptable for factor analysis, while a value below 0.50 suggests that the data is not suitable for factor analysis.
+#'
+#' Bartlett’s Test of Sphericity tests whether the correlation matrix is an identity matrix, with a significant
+#' result indicating that the variables are inter-correlated and appropriate for factor analysis.
+#'
+#' This function is primarily used in exploratory factor analysis (EFA) to assess the suitability of a dataset.
+#'
+#' @importFrom psych KMO cortest.bartlett
+#' @export
+#'
+#' @examples
+#' # Example usage of efa_apr()
+#' efa_apr(ryanhonorthesis[, 2:9])
+#'
+#> Function for various tests of whether matrix is good for fa -----
+efa_apr <- function(df) {
+
+  # KMO test
+  kmo_test <- psych::KMO(df)
+  kmo_stat <- kmo_test$MSA #looking at the test statistic
+  kmo_vals <- kmo_test$MSAi[kmo_test$MSAi <= 0.70] #seeing how many values below a cutoff point
+  kmo_min <- min(kmo_test$MSAi)
+  #> bad items might pop up with a low MSA value
+
+  # Bartlett Test of Sphericity
+  bart_test <- psych::cortest.bartlett(df)
+  bart_p <- bart_test$p.value #want a significant result to reject that the matrix is an identity matrix
+  bart_chisq <- bart_test$chisq
+  bart_df <- bart_test$df
+  #> very sensitive to sample size, but commonly reported
+
+  final <- list(
+    c(
+      "KMO test statistic:" = kmo_stat,
+      "KMO minimum value:" = kmo_min,
+      "Bartlett Test of Sphericity P-value:" = bart_p,
+      "Bartlett Chi Square Value:" = bart_chisq,
+      "Bartlett Degrees of Freedom:" = bart_df),
+    "KMO Values < .70" = kmo_vals
+  )
+  return(final)
+
+}
 
