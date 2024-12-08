@@ -160,7 +160,7 @@ efa_results <- function(fa_df, n_factors) {
   }
 
   efa_pm_com_result <- pm_com_fun(model_name, n_factors)
-
+if (n_factors == 1) {
   final <- list(
     "efa" = model_name,
     "pm_com" = efa_pm_com_result,
@@ -172,6 +172,18 @@ efa_results <- function(fa_df, n_factors) {
     "coms" = nice_coms,
     "scree_plot" = scree_plot
   )
+} else { #removing the scree plot from results that are not 1 factor
+  final <- list(
+    "efa" = model_name,
+    "pm_com" = efa_pm_com_result,
+    "pm" = pm_result,
+    "sm" = sm_result,
+    "com_mean" = com_mean,
+    "com_min" = com_min,
+    "com_max" = com_max,
+    "coms" = nice_coms
+  )
+}
 
   return(final) # Returns the efa model to the global environment
 }
