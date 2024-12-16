@@ -11,6 +11,7 @@ utils::globalVariables(c("nrows", "count"))
 #'
 #' @param df A data frame containing the variable to be plotted.
 #' @param variable The variable in the data frame for which the histogram is generated. This can be either a numeric or a factor variable.
+#' @param force_factor Default = TRUE. Do I want to automatically change numeric variables with a range between 4 and 11 to a factor?
 #'
 #' @return A `ggplot` object representing the histogram.
 #' @export
@@ -25,9 +26,9 @@ utils::globalVariables(c("nrows", "count"))
 #'
 #' # Example of using generate_histogram with a factor variable
 #' dynamic_histogram(ryanhonorthesis, osf_closer_ssf)
-dynamic_histogram <- function(df, variable) {
+dynamic_histogram <- function(df, variable, force_factor = TRUE) {
 
-  #> Introduction  ---------
+  #> Introduction Setup ---------
   #making the variable a symbol to pass it into things outside of the tidyverse selections
   var_sym <- rlang::ensym(variable)
 
@@ -40,11 +41,26 @@ dynamic_histogram <- function(df, variable) {
   caption2 <- base::paste0(caption1, ";") #adds a semi-colon for clarity in graph
   caption3 <- base::paste(caption2, "NA = ", sum(is.na(df[[var_sym]]))) #calculates number of "na"
 
+  #> This forces any numeric variable that has between 4 and 11 unique values to
+  #> be a factor so I can at least get the response option percentages. Will also
+  #> help the function not fail if I don't specify typical responses as factors
+  #> before hand. Although, specifying them as factors before hand and including
+  #> the levels of the variables will make a more informative graph because it will
+  #> label the groups with the correct anchor.
+  if(force_factor == TRUE && is.numeric(df[[var_sym]])
+          && length(unique(df[[var_sym]])) >= 4 &&
+          length(unique(df[[var_sym]])) <= 11) {
+
+    df[[var_sym]] <- as.factor(df[[var_sym]])
+
+  }
+
+
   # Remove NA values from the variable (they will be removed automatically anyway)
   df <- df |> dplyr::filter(!is.na(!!var_sym))
 
-#> Conditions --------
-  if (is.double(df[[var_sym]]) | is.integer(df[[var_sym]]) && length(unique(df[[var_sym]])) >= 12) { #If the variable is a double (numeric) and there are more than 12 unique values
+#> Numeric and 12 or more unique values --------
+  if (is.numeric(df[[var_sym]]) && length(unique(df[[var_sym]])) >= 12) { #If the variable is a numeric (double or integer) and there are more than 12 unique values (including NA)
 
     #calculate range of x-axis (for caption)
     max_x <- base::max(df[[var_sym]], na.rm = TRUE)
@@ -112,6 +128,7 @@ dynamic_histogram <- function(df, variable) {
 
   }
 
+#> Factor Variables --------
   else if (is.factor(df[[var_sym]])) {
 
     #calculating the number of levels the variable has

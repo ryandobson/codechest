@@ -4,12 +4,14 @@
 \alias{dynamic_histogram}
 \title{Generate Histogram for a Given Variable}
 \usage{
-dynamic_histogram(df, variable)
+dynamic_histogram(df, variable, force_factor = TRUE)
 }
 \arguments{
 \item{df}{A data frame containing the variable to be plotted.}
 
 \item{variable}{The variable in the data frame for which the histogram is generated. This can be either a numeric or a factor variable.}
+
+\item{force_factor}{Default = TRUE. Do I want to automatically change numeric variables with a range between 4 and 11 to a factor?}
 }
 \value{
 A \code{ggplot} object representing the histogram.
