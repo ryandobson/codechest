@@ -156,10 +156,11 @@ efa_results <- function(fa_df, n_factors) {
       kableExtra::kbl(format = "html", escape = FALSE) |>
       kableExtra::kable_paper("striped")
 
-    efa_pm_com
-  }
+
+  } #end of pm_com_fun function
 
   efa_pm_com_result <- pm_com_fun(model_name, n_factors)
+
 if (n_factors == 1) {
   final <- list(
     "efa" = model_name,
@@ -350,3 +351,51 @@ efa_apr <- function(df) {
 
 }
 
+#' Pattern Matrix and Communalities Table
+#'
+#' Creates a formatted HTML table of the pattern matrix and communalities from an EFA (Exploratory Factor Analysis) model.
+#' The table highlights factor loadings that exceed the specified threshold (`bold_value`) in bold.
+#'
+#' @param efa_model An object containing the results of an EFA analysis. This object must include the elements `factors` (the number of factors) and `loadings` (the factor loading matrix).
+#' @param bold_value A numeric value indicating the absolute threshold for bolding factor loadings. Default is 0.32.
+#'
+#' @return A formatted HTML table of the pattern matrix and communalities, styled with bolded loadings that meet the threshold.
+#'
+#' @details The function processes the factor loading matrix and communalities from the `efa_model`. It merges these into a single data frame, rounds values to two decimal places, and applies bold formatting to loadings greater than or equal to the absolute value of `bold_value`. The final output is an HTML table styled using the `kableExtra` package.
+#'
+#' @importFrom dplyr rename left_join mutate across where
+#' @importFrom tibble rownames_to_column as_tibble
+#' @importFrom kableExtra kbl kable_paper cell_spec
+
+pm_com_fun <- function(efa_model, bold_value = .32) {
+
+  nfactors <- efa_model$factors
+
+  efa_pm <- efa_model$loadings[, 1:nfactors] # Factor loading pattern matrix
+
+  efa_coms <- efa_model$communality
+
+  efa_coms <- efa_coms |>
+    as.data.frame() |>
+    tibble::rownames_to_column() |>
+    tibble::as_tibble() |>
+    dplyr::rename(
+      "Variable" = rowname,
+      "Communalities" = efa_coms
+    )
+
+  efa_pm <- efa_pm |>
+    as.data.frame() |>
+    tibble::rownames_to_column() |>
+    tibble::as_tibble() |>
+    dplyr::rename("Variable" = rowname)
+
+  efa_pm_com <- efa_pm |>
+    dplyr::left_join(efa_coms, by = "Variable") |>
+    dplyr::mutate(across(where(is.double), ~ round(., 2))) |>
+    dplyr::mutate(across(where(is.double), ~ kableExtra::cell_spec(., bold = ifelse(. <= -bold_value | . >= bold_value, TRUE, FALSE)))) |>
+    kableExtra::kbl(format = "html", escape = FALSE) |>
+    kableExtra::kable_paper("striped")
+
+  return(efa_pm_com)
+}
