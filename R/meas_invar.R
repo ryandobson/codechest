@@ -44,7 +44,6 @@ utils::globalVariables(c("anova", "cfa"))
 #' @importFrom lavaan cfa anova
 #' @export
 
-
 test_measurement_invariance <- function(model, data, group) {
   # Configural Invariance
   fit_configural <- cfa(model, data = data, group = group, meanstructure = TRUE)
@@ -70,3 +69,62 @@ test_measurement_invariance <- function(model, data, group) {
     comparisons = comparisons
   )
 }
+
+
+#' Run Multiple Measurement Invariance Tests
+#'
+#' This function tests measurement invariance for multiple models across multiple grouping variables.
+#' It applies the `test_measurement_invariance` function to each combination of model and grouping variable
+#' and returns a structured list of results.
+#'
+#' @param models A named list of models to test, where the names represent the model identifiers,
+#'   and the values are the model strings in `lavaan` syntax.
+#' @param data A data frame containing the observed variables used in the models.
+#' @param group_vars A character vector specifying the grouping variables to test invariance against.
+#'
+#' @return A list where each element corresponds to a specific model and grouping variable combination.
+#'   Each element contains the results returned by `test_measurement_invariance`, including:
+#'   \describe{
+#'     \item{configural}{The configural invariance model fit.}
+#'     \item{metric}{The metric invariance model fit.}
+#'     \item{scalar}{The scalar invariance model fit.}
+#'     \item{strict}{The strict invariance model fit.}
+#'     \item{comparisons}{The comparison of fit statistics across invariance levels.}
+#'   }
+#'
+#' @details
+#' This function is designed for scenarios where multiple measurement models need to be tested for invariance
+#' across multiple grouping variables. It automates the process by iterating through all combinations of
+#' models and grouping variables, running `test_measurement_invariance` for each combination, and storing
+#' the results in a structured format.
+#'
+#' The function prints basic progress information to the console, including the current model and grouping
+#' variable being processed, as well as the fit comparisons for each invariance test.
+#'
+
+#' @seealso \code{\link{test_measurement_invariance}}
+#' @importFrom lavaan cfa anova
+#' @export
+
+run_multiple_invariance <- function(models, data, group_vars) {
+  results <- list()
+
+  for (group_var in group_vars) {
+    for (model_name in names(models)) {
+      model <- models[[model_name]]
+      # Run measurement invariance
+      mi_result <- test_measurement_invariance(model, data, group_var)
+      # Store results in a structured way
+      results[[paste0(model_name, "_", group_var)]] <- mi_result
+
+      # Print basic output for monitoring progress
+      cat("\nModel:", model_name, "Group:", group_var, "\n")
+      print(mi_result$comparisons)
+    }
+  }
+
+  #return(results)
+}
+
+
+
