@@ -28,6 +28,8 @@ but this can be adjusted by modifying the \code{ifelse} condition inside the \co
 }
 \examples{
 # Example usage of cor_mat_bold_fun
+\donttest{
 cor_matrix <- cor(mtcars)
 cor_format(cor_matrix, bold_val = 0.3)
+}
 }
