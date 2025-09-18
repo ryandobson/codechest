@@ -26,7 +26,7 @@
 #>This means that multiple files have been reduced to a single file (.tar) and then
 #>compressed using gzip (.gz).
 #>Bundles aren't useful on their own, but its a platform-agnostic transportaiton-friendly
-#>intermediary between a source pacakge and an installed package.
+#>intermediary between a source package and an installed package.
 #> Every CRAN package is available in bundled form via the "Package source" field
 #> on its landing page.
 #>You can download bundles and then unpack the bundle via the shell.
@@ -79,8 +79,8 @@
 
 #> Installed Package -----
 
-#>An installed package is a binary package that's been decompressed into a pacakge
-#>libarary.
+#>An installed package is a binary package that's been decompressed into a package
+#>library.
 
 #> There are some useful different things to consider when installing packages.
 #> Not too relevant currently. See website: https://r-pkgs.org/structure.html
@@ -118,7 +118,7 @@
 #>clean out your add-on packages without distrubing your base R installation.
 #>
 
-#>As your R usage becomes more sophisticaed, its common to start managing package
+#>As your R usage becomes more sophisticated, its common to start managing package
 #>libraries with more intention.
 #>Renv automates the process of managing project-specific libraries.
 
