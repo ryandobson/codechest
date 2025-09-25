@@ -2,62 +2,48 @@
 % Please edit documentation in R/cor_information.R
 \name{combine_corr_triangles}
 \alias{combine_corr_triangles}
-\title{Combine Upper and Lower Correlation Triangles}
+\title{Combine upper and lower triangles from two correlation matrices}
 \usage{
 combine_corr_triangles(
   upper_mat,
   lower_mat,
-  diag_from = c("upper", "lower", "average", "one", "zero")
+  diag_from = c("upper", "lower", "average", "one", "zero"),
+  rename_cols = TRUE
 )
 }
 \arguments{
-\item{upper_mat}{A square numeric matrix providing the strict upper triangle
-(above-diagonal) values. Must have row/column names.}
-
-\item{lower_mat}{A square numeric matrix providing the strict lower triangle
-(below-diagonal) values. Must have row/column names and the same set of
-variable names as \code{upper_mat} (order may differ).}
+\item{upper_mat, lower_mat}{Square numeric matrices with identical variable
+sets (names can be in different orders).}
 
 \item{diag_from}{One of \code{"upper"}, \code{"lower"}, \code{"average"},
-\code{"one"}, or \code{"zero"} specifying how to fill the diagonal:
-\itemize{
-\item \code{"upper"}: use \code{diag(upper_mat)}
-\item \code{"lower"}: use \code{diag(lower_mat)}
-\item \code{"average"}: row-wise mean of the two diagonals (ignoring NAs)
-\item \code{"one"}: set diagonal to 1
-\item \code{"zero"}: set diagonal to 0
-}}
+\code{"one"}, or \code{"zero"} determining the diagonal values.}
+
+\item{rename_cols}{Logical; if \code{TRUE}, row names become
+\code{"<original> (1..n)"} and column names become \code{"1..n"}.}
 }
 \value{
-A square numeric matrix whose strict upper triangle comes from
-\code{upper_mat}, strict lower triangle from \code{lower_mat}, and diagonal
-determined by \code{diag_from}. Row names are suffixed with positional
-indices \code{" (1)", " (2)", ...}, and column names are set to character
-indices \code{"1","2",...}.
+A numeric matrix with combined triangles. If \code{rename_cols=TRUE},
+returns publication-style numbering in column names and numbered row labels.
 }
 \description{
-Combines two square matrices by taking the strict upper triangle from one
-and the strict lower triangle from the other. The diagonal can be taken from
-either input, averaged, or set to a constant (1 or 0). Variable orders are
-aligned by name before combining.
+Given two square correlation matrices over the same variables, align them to
+a common order and create a single matrix whose upper triangle comes from the
+first input and lower triangle from the second input. Control how the
+diagonal is filled (e.g., use ones for a correlation-style display).
 }
 \details{
-The function checks that both inputs are square matrices with names and the
-same set of variables. It reorders \code{lower_mat} to match the column order
-of \code{upper_mat} before combining. Only strict triangles are copied; the
-diagonal is handled separately according to \code{diag_from}.
+Matrices are aligned by column names; both inputs must be square and have
+non-\code{NULL} dimnames. The result's off-diagonals are taken from the
+specified triangles of each input.
 }
 \examples{
 set.seed(1)
-vars <- c("A","B","C")
-U <- matrix(runif(9), 3, 3, dimnames = list(vars, vars))
-L <- matrix(runif(9), 3, 3, dimnames = list(vars, vars))
-U[lower.tri(U, diag = TRUE)] <- NA_real_
-L[upper.tri(L, diag = TRUE)] <- NA_real_
-diag(U) <- 1; diag(L) <- 1
+x <- cor(matrix(rnorm(60), ncol = 6))
+y <- cor(matrix(rnorm(60), ncol = 6))
+dimnames(y) <- dimnames(x) <- list(letters[1:6], letters[1:6])
+combine_corr_triangles(x, y, diag_from = "one")
 
-combine_corr_triangles(U, L, diag_from = "upper")
-combine_corr_triangles(U, L, diag_from = "average")
-combine_corr_triangles(U, L, diag_from = "one")
-
+}
+\seealso{
+\code{\link[=rename_rnd_cor]{rename_rnd_cor()}}
 }

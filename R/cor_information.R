@@ -191,40 +191,47 @@ compute_split_cors <- function(df, cor_vars, group_var, groups, cor_use = "pairw
 
 
 
-#' Rename Rows and Columns of a Correlation Matrix
+#' Safely rename and round a correlation matrix
 #'
-#' This function renames the row and column names of a correlation matrix
-#' using a user-supplied vector of old-to-new name mappings. The renaming
-#' is "safe": if some names are not found in the mapping, the original
-#' names are preserved. The function also optionally rounds the
-#' correlation values.
+#' Renames rows/columns of a correlation matrix using a name mapping, with
+#' optional automatic flipping of the mapping direction (old→new vs. new→old),
+#' optional rounding, and optional publication-style column labels ("1","2",...).
 #'
-#' @param cor_mat A correlation matrix, typically produced by [stats::cor()].
-#' @param rename_vec A named character vector of name mappings, where the
-#'   names correspond to the old variable names and the values correspond
-#'   to the new names. For example:
-#'   \code{c(old_name1 = "New Name 1", old_name2 = "New Name 2")}.
-#'   Extra mappings not present in \code{cor_mat} are ignored without error.
-#' @param rnd Integer specifying the number of decimal places to round to.
-#'   Defaults to 2. Set to \code{FALSE} or \code{NULL} to skip rounding.
-#'
-#' @return A correlation matrix with updated row and column names.
-#'   If \code{rnd} is specified, the matrix values are rounded.
+#' @param cor_mat A square numeric correlation matrix (e.g., from [stats::cor()]).
+#' @param rename_vec Optional named character vector for renaming.
+#'   Accepts either \code{old_name = "New Label"} (preferred) or the reverse.
+#'   Extra names in \code{rename_vec} that are not present in \code{cor_mat}
+#'   are ignored.
+#' @param rename_cols Logical; if \code{TRUE}, row names become
+#'   \code{"<original> (1..n)"} and column names become \code{"1..n"}.
+#' @param rnd Integer number of decimals to round to. Set \code{FALSE} to skip.
 #'
 #' @details
-#' The function uses an internal helper (`safe_rename`) to apply
-#' the renaming. If all current names already match the new names,
-#' no changes are made. If some names are missing from the mapping,
-#' they are left unchanged.
+#' If none of the matrix names match \code{names(rename_vec)} but some match
+#' \code{unname(rename_vec)}, the mapping is flipped automatically so the
+#' function remains robust to \code{old→new} vs. \code{new→old} inputs.
+#'
+#' @return A correlation matrix with updated dimnames; possibly rounded and with
+#'   publication-style numbering if \code{rename_cols = TRUE}.
 #'
 #' @examples
-#' mat <- cor(mtcars[, 1:3])
-#' rename_vec <- c(mpg = "Miles Per Gallon", cyl = "Cylinders")
-#' rename_cor(mat, rename_vec, rnd = 3)
+#' set.seed(1)
+#' m <- cor(matrix(rnorm(50), ncol = 5))
+#' dimnames(m) <- list(letters[1:5], letters[1:5])
+#' map <- c(a = "Alpha", b = "Beta")
+#' rename_rnd_cor(m, map, rename_cols = TRUE, rnd = 2)
 #'
+#' # Works if mapping direction is reversed:
+#' map_rev <- c("Alpha" = "a", "Beta" = "b")
+#' rename_rnd_cor(m, map_rev)
+#'
+#' @seealso [stats::cor()], [combine_corr_triangles()]
 #' @export
 
-rename_cor <- function(cor_mat, rename_vec, rnd = 2) {
+rename_rnd_cor <- function(cor_mat,
+                           rename_vec = NULL,
+                           rename_cols = TRUE,
+                           rnd = 2) {
   #cor_matrix = correlation matrix, usually produced by "cor()"
   #rename_vec = a renaming vector that specifies the updated names
   #> Created by doing rename_vec <- c(old_name1 = "New Name 1",
@@ -232,86 +239,79 @@ rename_cor <- function(cor_mat, rename_vec, rnd = 2) {
   #
   #> NOTE: The rename_vec can contain additional variables that I don't have in
   #> the correlation matrix and this function still works.
-
-  # Helper: safely rename one side (cols or rows)
-  safe_rename <- function(nms, map) {
-    # If all names are already in the map's values (new names), return as-is
-    if (all(nms %in% unname(map))) {
-      return(nms)
+  if(!is.null(rename_vec)) {
+    # Helper: safely rename one side (cols or rows)
+    safe_rename <- function(nms, rename_vec) {
+      # If mapping looks like new->old (i.e., nms match the values), flip it
+      if (!any(nms %in% names(rename_vec)) && any(nms %in% unname(rename_vec))) {
+        rename_vec <- setNames(names(rename_vec), unname(rename_vec))  # now old->new
+      }
+      out <- rename_vec[nms]
+      out[is.na(out)] <- nms[is.na(out)]
+      out
     }
-    # Otherwise do the mapping
-    out <- map[nms]
-    # If map doesn't cover some names, keep originals
-    out[is.na(out)] <- nms[is.na(out)]
-    out
-  }
-  #> the safe_rename function takes two arguments:
-  #> nms = the colnames of the correlation matrix as "colnames(cor_mat)"
-  #> map = the rename_vec (same as supplied to the original function)
+    #> the safe_rename function takes two arguments:
+    #> nms = the colnames of the correlation matrix as "colnames(cor_mat)"
+    #> rename_vec = the rename_vec (same as supplied to the original function)
 
-  #> run the safe_rename function here
-  colnames(cor_mat) <- safe_rename(colnames(cor_mat), rename_vec)
-  rownames(cor_mat) <- safe_rename(rownames(cor_mat), rename_vec)
+    #> run the safe_rename function here
+    colnames(cor_mat) <- safe_rename(colnames(cor_mat), rename_vec)
+    rownames(cor_mat) <- safe_rename(rownames(cor_mat), rename_vec)
+
+  }
 
   if (!is.null(rnd) && rnd != FALSE) {
     cor_mat <- round(cor_mat, rnd)
+  }
+
+  #If I want to rename the columns with numbers instead of the full variable
+  #names
+  if(rename_cols == TRUE) {
+    n <- nrow(cor_mat)
+    orig_rn <- rownames(cor_mat)
+    rownames(cor_mat) <- paste0(orig_rn, " (", seq_len(n), ")")
+    colnames(cor_mat) <- as.character(seq_len(n))
   }
 
   return(cor_mat)
 }
 
 
-
-#' Combine Upper and Lower Correlation Triangles
+#' Combine upper and lower triangles from two correlation matrices
 #'
-#' Combines two square matrices by taking the strict upper triangle from one
-#' and the strict lower triangle from the other. The diagonal can be taken from
-#' either input, averaged, or set to a constant (1 or 0). Variable orders are
-#' aligned by name before combining.
+#' Given two square correlation matrices over the same variables, align them to
+#' a common order and create a single matrix whose upper triangle comes from the
+#' first input and lower triangle from the second input. Control how the
+#' diagonal is filled (e.g., use ones for a correlation-style display).
 #'
-#' @param upper_mat A square numeric matrix providing the strict upper triangle
-#'   (above-diagonal) values. Must have row/column names.
-#' @param lower_mat A square numeric matrix providing the strict lower triangle
-#'   (below-diagonal) values. Must have row/column names and the same set of
-#'   variable names as \code{upper_mat} (order may differ).
+#' @param upper_mat,lower_mat Square numeric matrices with identical variable
+#'   sets (names can be in different orders).
 #' @param diag_from One of \code{"upper"}, \code{"lower"}, \code{"average"},
-#'   \code{"one"}, or \code{"zero"} specifying how to fill the diagonal:
-#'   \itemize{
-#'     \item \code{"upper"}: use \code{diag(upper_mat)}
-#'     \item \code{"lower"}: use \code{diag(lower_mat)}
-#'     \item \code{"average"}: row-wise mean of the two diagonals (ignoring NAs)
-#'     \item \code{"one"}: set diagonal to 1
-#'     \item \code{"zero"}: set diagonal to 0
-#'   }
-#'
-#' @return A square numeric matrix whose strict upper triangle comes from
-#'   \code{upper_mat}, strict lower triangle from \code{lower_mat}, and diagonal
-#'   determined by \code{diag_from}. Row names are suffixed with positional
-#'   indices \code{" (1)", " (2)", ...}, and column names are set to character
-#'   indices \code{"1","2",...}.
+#'   \code{"one"}, or \code{"zero"} determining the diagonal values.
+#' @param rename_cols Logical; if \code{TRUE}, row names become
+#'   \code{"<original> (1..n)"} and column names become \code{"1..n"}.
 #'
 #' @details
-#' The function checks that both inputs are square matrices with names and the
-#' same set of variables. It reorders \code{lower_mat} to match the column order
-#' of \code{upper_mat} before combining. Only strict triangles are copied; the
-#' diagonal is handled separately according to \code{diag_from}.
+#' Matrices are aligned by column names; both inputs must be square and have
+#' non-\code{NULL} dimnames. The result's off-diagonals are taken from the
+#' specified triangles of each input.
+#'
+#' @return A numeric matrix with combined triangles. If \code{rename_cols=TRUE},
+#'   returns publication-style numbering in column names and numbered row labels.
 #'
 #' @examples
 #' set.seed(1)
-#' vars <- c("A","B","C")
-#' U <- matrix(runif(9), 3, 3, dimnames = list(vars, vars))
-#' L <- matrix(runif(9), 3, 3, dimnames = list(vars, vars))
-#' U[lower.tri(U, diag = TRUE)] <- NA_real_
-#' L[upper.tri(L, diag = TRUE)] <- NA_real_
-#' diag(U) <- 1; diag(L) <- 1
+#' x <- cor(matrix(rnorm(60), ncol = 6))
+#' y <- cor(matrix(rnorm(60), ncol = 6))
+#' dimnames(y) <- dimnames(x) <- list(letters[1:6], letters[1:6])
+#' combine_corr_triangles(x, y, diag_from = "one")
 #'
-#' combine_corr_triangles(U, L, diag_from = "upper")
-#' combine_corr_triangles(U, L, diag_from = "average")
-#' combine_corr_triangles(U, L, diag_from = "one")
-#'
+#' @seealso [rename_rnd_cor()]
 #' @export
+
 combine_corr_triangles <- function(upper_mat, lower_mat,
-                                   diag_from = c("upper", "lower", "average", "one", "zero")) {
+                                   diag_from = c("upper", "lower", "average", "one", "zero"),
+                                   rename_cols = TRUE) {
   diag_from <- match.arg(diag_from)
 
   # --- Basic checks ---
@@ -350,111 +350,154 @@ combine_corr_triangles <- function(upper_mat, lower_mat,
 
   # --- Final naming step ---
   # Append " (1)", " (2)", ... to rownames; set colnames to "1","2",...
-  orig_rn <- rownames(out)
-  rownames(out) <- paste0(orig_rn, " (", seq_len(n), ")")
-  colnames(out) <- as.character(seq_len(n))
+  if(rename_cols == TRUE) {
+    orig_rn <- rownames(out)
+    rownames(out) <- paste0(orig_rn, " (", seq_len(n), ")")
+    colnames(out) <- as.character(seq_len(n))
+  }
 
   return(out)
 }
 
 
 
-#' Publish-Ready Correlation Table Combining Two Groups
+#' Publish-ready two-group correlation display (upper vs. lower triangle)
 #'
-#' Computes group-specific correlation matrices, renames variables, combines
-#' them into a single matrix with one group's correlations in the strict upper
-#' triangle and the other's in the strict lower triangle, and attaches a note
-#' indicating which group is where. Optionally sets/derives the diagonal and
-#' rounds values. The returned object has class \code{"pub_cors_mat"} for
-#' convenient downstream printing/export.
+#' Splits a data frame by a grouping variable, computes correlations on a set of
+#' variables for two specified groups, renames/rounds them consistently, and
+#' combines them into a single matrix with group 1 in the upper triangle and
+#' group 2 in the lower triangle.
 #'
-#' @param df A data frame containing the variables of interest and the grouping variable.
-#' @param cor_vars A character vector of variable names to include in the correlation analysis.
-#' @param group_var The grouping variable, supplied as a bare name or a string. Must exist in \code{df}.
-#' @param groups A character vector of length two giving the two levels of \code{group_var}
-#'   to split the data by (e.g., \code{c("male", "female")}).
-#' @param rename_vec A named character vector mapping old variable names (names of the vector)
-#'   to new display names (values). Extra mappings not present in \code{cor_vars} are ignored.
-#' @param diag_from How to fill the diagonal of the combined matrix. One of
-#'   \code{"upper"}, \code{"lower"}, \code{"average"}, \code{"one"}, or \code{"zero"}.
-#'   Defaults to \code{"one"}.
-#' @param cor_use Character string passed to the \code{use} argument of [stats::cor()]
-#'   (e.g., \code{"pairwise"}, \code{"complete.obs"}). Defaults to \code{"pairwise"}.
-#' @param rnd Integer number of decimal places for rounding. Defaults to 2. Set to
-#'   \code{FALSE} or \code{NULL} to skip rounding.
-#'
-#' @return A square numeric matrix of class \code{c("pub_cors_mat", "matrix")}.
-#'   The strict upper triangle contains correlations from \code{groups[1]}, the strict
-#'   lower triangle from \code{groups[2]}, and the diagonal is set according to
-#'   \code{diag_from}. An attribute \code{attr(x, "note")} is added in the form
-#'   \dQuote{Upper triangle = <group1>, Lower triangle = <group2>}. Row names are
-#'   suffixed with indices \code{" (1)", " (2)", ...}, and column names are character
-#'   indices \code{"1","2",...}, mirroring [combine_corr_triangles()].
+#' @param data A data frame.
+#' @param cor_vars Character vector of variable names to include in the
+#'   correlation matrices.
+#' @param group_var Grouping variable; can be supplied bare (unquoted) or as a
+#'   string.
+#' @param groups Length-2 character vector giving the two group values
+#'   (order matters: \code{groups[1]} → upper triangle, \code{groups[2]} → lower).
+#' @param rename_vec Optional named character vector for renaming variables
+#'   (robust to old→new vs. new→old mapping); see [rename_rnd_cor()].
+#' @param rename_cols Logical; if \code{TRUE}, row names become
+#'   \code{"<original> (1..n)"} and column names become \code{"1..n"}.
+#' @param diag_from How to fill the diagonal in the combined matrix; passed to
+#'   [combine_corr_triangles()] (default \code{"one"}).
+#' @param cor_use Passed to [stats::cor()] \code{use=} argument (e.g.,
+#'   \code{"pairwise"} or \code{"complete"}).
+#' @param rnd Integer number of decimals to round to before combining.
 #'
 #' @details
-#' Internally, this function:
-#' \enumerate{
-#'   \item splits \code{df} by \code{group_var} and computes two correlation matrices via
-#'     [compute_split_cors()],
-#'   \item renames rows/columns using [rename_cor()] with \code{rename_vec} and \code{rnd},
-#'   \item merges triangles with [combine_corr_triangles()] using \code{diag_from},
-#'   \item tags the result with class \code{"pub_cors_mat"} and a descriptive \code{"note"} attribute.
-#' }
+#' Internally calls \code{compute_split_cors(data, cor_vars, group_var, groups,
+#' cor_use)} (not exported here) to produce two correlation matrices. Each is
+#' passed through [rename_rnd_cor()] with \code{rename_cols = FALSE} to ensure
+#' consistent naming prior to [combine_corr_triangles()].
+#'
+#' The returned object has class \code{"pub_cors_mat"} and a \code{"note"}
+#' attribute describing which group appears in the upper and lower triangles.
+#'
+#' @return A matrix of class \code{"pub_cors_mat"} with attribute
+#'   \code{note = "Upper triangle = <g1>, Lower triangle = <g2>"}.
 #'
 #' @examples
-#' # Minimal reproducible example
-#' df <- iris
-#' cor_vars <- c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")
-#' groups <- c("setosa","versicolor")
-#' rename_vec <- c(
-#'   Sepal.Length = "Sepal Length",
-#'   Sepal.Width  = "Sepal Width",
-#'   Petal.Length = "Petal Length",
-#'   Petal.Width  = "Petal Width"
+#' # Toy example
+#' set.seed(1)
+#' df <- data.frame(
+#'   grp = rep(c("Study 1","Study 2"), each = 50),
+#'   A = rnorm(100), B = rnorm(100), C = rnorm(100)
 #' )
-#'
-#' tbl <- pub_cors(
-#'   df, cor_vars,
-#'   group_var = "Species",
-#'   groups = groups,
-#'   rename_vec = rename_vec,
-#'   diag_from = "one",
-#'   cor_use = "pairwise",
+#' pub_cors_by(
+#'   data = df,
+#'   cor_vars = c("A","B","C"),
+#'   group_var = grp,
+#'   groups = c("Study 1","Study 2"),
+#'   rename_vec = c(A = "Alpha", B = "Beta", C = "Gamma"),
 #'   rnd = 2
 #' )
-#' class(tbl)
-#' attr(tbl, "note")
 #'
-#' @seealso [compute_split_cors()], [rename_cor()], [combine_corr_triangles()], [stats::cor()]
-#'
+#' @seealso [stats::cor()], [rename_rnd_cor()], [combine_corr_triangles()]
 #' @export
 
-pub_cors <- function(df, cor_vars, group_var, groups,
-                     rename_vec,
-                     diag_from = "one",
-                     cor_use = "pairwise",
-                     rnd = 2) {
 
-
+pub_cors_by <- function(data,
+                        cor_vars,
+                        group_var,
+                        groups,
+                        rename_vec = NULL,
+                        rename_cols = TRUE,
+                        diag_from = "one",
+                        cor_use = "pairwise",
+                        rnd = 2) {
   #> base r version of allowing bare name or string as input for group_var
   expr <- substitute(group_var)
-  gv <- if (is.symbol(expr)) deparse(expr) else as.character(group_var)
+  gv <- if (is.symbol(expr)) deparse(expr) else as.character(group_var)[1L]
 
-  cor_mats <- compute_split_cors(df, cor_vars, as.name(gv), groups, cor_use = cor_use)
+  cor_mats <- compute_split_cors(data, cor_vars, as.name(gv), groups, cor_use = cor_use)
 
-  cor1 <- rename_cor(cor_mats[[1]], rename_vec, rnd = rnd)
-  cor2 <- rename_cor(cor_mats[[2]], rename_vec, rnd = rnd)
 
-  out <- combine_corr_triangles(cor1, cor2, diag_from = diag_from)
+  cor1 <- rename_rnd_cor(cor_mats[[1]],
+                         rename_vec = rename_vec,
+                         rename_cols = FALSE,
+                         rnd = rnd)
+  cor2 <- rename_rnd_cor(cor_mats[[2]],
+                         rename_vec = rename_vec,
+                         rename_cols = FALSE,
+                         rnd = rnd)
+
+  out <- combine_corr_triangles(cor1, cor2,
+                                diag_from = diag_from,
+                                rename_cols = rename_cols)
 
   #> Adding a custom note to the matrix so I can see what group is upper/lower
   attr(out, "note") <- paste0("Upper triangle = ", groups[1],
                               ", Lower triangle = ", groups[2])
   class(out) <- c("pub_cors_mat", class(out))  # add custom class
 
+
   return(out)
 
 }
 
+#' Single-group (pooled) correlation matrix with publication labels
+#'
+#' Compute a correlation matrix over \code{cor_vars}, optionally rename and
+#' round it, and optionally add publication-style numbering.
+#'
+#' @param data A data frame.
+#' @param cor_vars Character vector of variable names to include.
+#' @param rename_vec Optional named character vector for renaming variables
+#'   (robust to old→new vs. new→old mapping); see [rename_rnd_cor()].
+#' @param rename_cols Logical; if \code{TRUE}, row names become
+#'   \code{"<original> (1..n)"} and column names become \code{"1..n"}.
+#' @param cor_use Passed to [stats::cor()] \code{use=} argument.
+#' @param rnd Integer number of decimals to round to. Set \code{FALSE} to skip.
+#'
+#' @return A correlation matrix (numeric) with possibly renamed and numbered
+#'   dimnames suitable for publication.
+#'
+#' @examples
+#' set.seed(1)
+#' df <- data.frame(A = rnorm(40), B = rnorm(40), C = rnorm(40))
+#' pub_cors_all(df, c("A","B","C"),
+#'              rename_vec = c(A = "Alpha", B = "Beta", C = "Gamma"),
+#'              rename_cols = TRUE, rnd = 2)
+#'
+#' @seealso [stats::cor()], [rename_rnd_cor()]
+#' @export
 
+pub_cors_all <- function(data,
+                         cor_vars,
+                         rename_vec = NULL,
+                         rename_cols = TRUE,
+                         cor_use = "pairwise",
+                         rnd = 2) {
+
+  cor_mat <- cor(data[, cor_vars], use = cor_use)
+
+  cor_all <- rename_rnd_cor(cor_mat,
+                            rename_vec = rename_vec,
+                            rename_cols = rename_cols,
+                            rnd = rnd)
+
+  return(cor_all)
+
+}
 
