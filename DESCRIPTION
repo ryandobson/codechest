@@ -26,6 +26,7 @@ Imports:
     ggplot2,
     DescTools,
     stringr,
-    rlang
+    rlang,
+    haven
 Depends: 
     R (>= 3.5)

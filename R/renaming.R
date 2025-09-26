@@ -117,3 +117,86 @@ rename_rows <- function(df, rename_vector, columns_to_rename = NULL) {
   return(df)
 
 }
+
+
+
+
+
+#' Apply variable labels and anchors to a data frame
+#'
+#' This function iterates over a list of variable metadata and applies
+#' descriptive labels and optional anchor value labels to matching
+#' variables in a data frame. It is designed to work with
+#' `haven::labelled()` so the resulting data frame is ready for
+#' labelled-data workflows (e.g., exporting to SPSS/Stata or
+#' value-labelled analysis in R).
+#'
+#' @param df A data frame containing the variables to be labelled.
+#' @param variable_info A named list of metadata, where each element
+#'   corresponds to a variable in `df`. Each element should itself be a
+#'   list containing at least:
+#'   \describe{
+#'     \item{label}{A character string giving the descriptive label for the variable.}
+#'     \item{anchors}{(Optional) A character string naming which entry
+#'       of `anchor_catalog` to use for value labels. If `NULL` or
+#'       absent, only the variable label is applied.}
+#'   }
+#' @param anchor_catalog A named list of anchor sets (value labels),
+#'   where each entry is a named vector suitable for the `labels`
+#'   argument of `haven::labelled()`. Names should correspond to the
+#'   possible `anchors` values in `variable_info`.
+#'
+#' @return A data frame with the same structure as `df` but with
+#'   variable labels (and value labels, if specified) applied using
+#'   `haven::labelled`.
+#'
+#' @examples
+#'
+#' df <- data.frame(
+#'   sex = c(1, 2, 1),
+#'   age = c(23, 31, 27)
+#' )
+#'
+#' variable_info <- list(
+#'   sex = list(
+#'     label = "Participant sex",
+#'     anchors = "sex"
+#'   ),
+#'   age = list(
+#'     label = "Participant age"
+#'   )
+#' )
+#'
+#' anchor_catalog <- list(
+#'   sex = c("Male" = 1, "Female" = 2)
+#' )
+#'
+#' labelled_df <- apply_variable_info(df, variable_info, anchor_catalog)
+#' str(labelled_df)
+#'
+#' @export
+
+apply_variable_info <- function(df, variable_info, anchor_catalog) {
+  for (v in names(variable_info)) {
+    if (!v %in% names(df)) next
+
+    info <- variable_info[[v]]
+    lab  <- info$label
+
+    # only apply anchors if the field exists and is not NULL
+    if ("anchors" %in% names(info) && !is.null(info$anchors)) {
+      anc <- anchor_catalog[[info$anchors]]
+      df[[v]] <- haven::labelled(df[[v]], labels = anc, label = lab)
+    } else {
+      df[[v]] <- haven::labelled(df[[v]], label = lab)
+    }
+  }
+  df
+}
+
+
+
+
+
+
+
