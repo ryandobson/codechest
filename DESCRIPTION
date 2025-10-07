@@ -27,6 +27,7 @@ Imports:
     DescTools,
     stringr,
     rlang,
-    haven
+    haven,
+    lmerTest
 Depends: 
-    R (>= 3.5)
+    R (>= 4.1.0)
