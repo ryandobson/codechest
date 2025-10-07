@@ -2,21 +2,6 @@
 utils::globalVariables(c("lm", "lmer", "VarCorr", "tail"))
 
 
-#' Initialize an Empty Model-Comparison History
-#'
-#' Creates a fresh list to be used as the step-by-step log (history) of
-#' \code{\link{mlm_comparison}} decisions.
-#'
-#' @return An empty list of length 0 intended to hold named step entries.
-#'
-#' @examples
-#' H <- init_history()
-#' length(H)  # 0
-#'
-#' @keywords internal
-#' @export
-init_history <- function() list()
-
 
 
 #' Extract the Random Slope with the Smallest Variance
@@ -718,11 +703,7 @@ make_mlm_report <- function(history, title = NULL) {
 #' @param width Output width.
 #' @param alpha Significance level used for annotations (informational).
 #' @param ... Ignored.
-#' @export
-#' @method print mlm_report
-print.mlm_report <- function(x, digits = 2, max_terms = 6,
-                             width = getOption("width"), alpha = 0.05, ...) { ... }
-
+#' @exportS3Method print mlm_report
 print.mlm_report <- function(x, digits = 2, max_terms = 6,
                              width = getOption("width"), alpha = 0.05, ...) {
   cat("\n", x$title, "\n", sep = "")

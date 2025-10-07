@@ -28,6 +28,7 @@ Imports:
     stringr,
     rlang,
     haven,
+    lme4,
     lmerTest
 Depends: 
     R (>= 4.1.0)
