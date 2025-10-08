@@ -264,7 +264,7 @@ fixed_effect_int_drops <- function(model,
   #> significant menses interaction terms:
   fit_for_check <- if (exists("refit")) refit else model #this needs to be included
   #because if the while loop never runs "refit" doesn't exist and it fails.
-  any_interactions <- grab_int_coefs(refit, alpha = .10, var = remove_ints)
+  any_interactions <- grab_int_coefs(fit_for_check, alpha = .10, var = remove_ints)
 
   #If there are any significiant interaction terms (in this case, with the
   #variable to be removed, then continue on. If there are NO interaction terms,
