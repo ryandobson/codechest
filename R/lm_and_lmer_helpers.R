@@ -168,6 +168,14 @@ grab_int_coefs <- function(model, alpha = .10, var = "all_interactions") {
   #> model = the model to search in
   #> rename_vec = the nice_names name mapping vector for the rename.
 
+  if (!inherits(model, c("lmerModLmerTest","lmerMod","merMod"))) {
+    stop(
+      "`grab_int_coefs()` expected an lmer model but got class: ",
+      paste(class(model), collapse = "/"),
+      ". Did you pass a list (use [[ ]]) or the wrong element?"
+    )
+
+
   ms <- summary(model)
 
   # if(inherits(model, "merMod")) {}

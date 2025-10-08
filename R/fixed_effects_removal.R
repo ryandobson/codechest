@@ -272,7 +272,7 @@ fixed_effect_int_drops <- function(model,
   if (length(any_interactions) == 0 &&
       #if there are no interactions, then check to see if the main effect is
       #significant.
-      !.check_significance(refit, remove_ints, sig_value = .10)) {
+      !check_significance(fit_for_check, remove_ints, sig_value = .10)) {
 
     new_fixed_effects <- drop_main_effect(new_fixed_effects, remove_ints)
 
