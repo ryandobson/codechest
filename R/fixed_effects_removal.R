@@ -199,6 +199,12 @@ fixed_effect_int_drops <- function(model,
                              name_prefix = NULL #see log for automatic name
   )
 
+  #specifying it as null here helps navigate the if statement after the loop.
+  #if the while loop never runs (becuase there are no fixed_effects_to_drop),
+  #then I use the "model" supplied to the function, rather than the most recent
+  #"refit" model.
+  refit <- NULL  # before the while loop
+
   while(!is.null(fixed_effects_to_drop)) {
 
     #> putting in a safety stop to cut out the loop in case something goes awry
@@ -259,12 +265,14 @@ fixed_effect_int_drops <- function(model,
 
   }
 
-
   #> A final step is to remove the menses main effect, but only if there are no
   #> significant menses interaction terms:
-  fit_for_check <- if (exists("refit", inherits = FALSE)) refit else model
-  #because if the while loop never runs "refit" doesn't exist and it fails.
-  any_interactions <- grab_int_coefs(fit_for_check, alpha = .10, var = remove_ints)
+
+  #If the while loop never runs, refit is assigned null, and then I want to use
+  #the original model.
+  fit_for_check <- if (is.null(refit)) model else refit
+  #return(fit_for_check)
+  any_interactions <- grab_int_coefs(fit_for_check, alpha = 0.1, var = remove_ints)
 
   #If there are any significiant interaction terms (in this case, with the
   #variable to be removed, then continue on. If there are NO interaction terms,
@@ -272,12 +280,11 @@ fixed_effect_int_drops <- function(model,
   if (length(any_interactions) == 0 &&
       #if there are no interactions, then check to see if the main effect is
       #significant.
-      !check_significance(fit_for_check, remove_ints, sig_value = .10)) {
+      !check_significance(fit_for_check, remove_ints, sig_value = 0.1)) {
 
-    new_fixed_effects <- drop_main_effect(new_fixed_effects, remove_ints)
-
+       new_fixed_effects <- drop_main_effect(new_fixed_effects,
+                                          remove_ints)
   }
-
 
   #> I now need to build a new model formula that has
   #> (1) original random effects provided
