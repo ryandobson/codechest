@@ -262,7 +262,7 @@ fixed_effect_int_drops <- function(model,
 
   #> A final step is to remove the menses main effect, but only if there are no
   #> significant menses interaction terms:
-  fit_for_check <- if (exists("refit")) refit else model #this needs to be included
+  fit_for_check <- if (exists("refit", inherits = FALSE)) refit else model
   #because if the while loop never runs "refit" doesn't exist and it fails.
   any_interactions <- grab_int_coefs(fit_for_check, alpha = .10, var = remove_ints)
 
