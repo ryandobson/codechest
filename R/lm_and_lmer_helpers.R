@@ -174,7 +174,7 @@ grab_int_coefs <- function(model, alpha = .10, var = "all_interactions") {
       paste(class(model), collapse = "/"),
       ". Did you pass a list (use [[ ]]) or the wrong element?"
     )
-
+  }
 
   ms <- summary(model)
 
@@ -781,7 +781,7 @@ drop_main_effect <- function(fixed_effects, drop_effect) {
 #'
 #' @return If \code{sig_value} is \code{NULL}, a numeric p-value; otherwise a logical.
 #' @keywords internal
-#' @noRd
+#' @export
 check_significance <- function(model, var, sig_value = NULL) {
 
   #grab model summary and turn it into a data frame with the variables as a new
@@ -963,16 +963,17 @@ misc_lmer <- function(lmer_model) {
   #> This is a good thing to do because it is very unlikely that I will run models
   #> without an intercept and if I do there is a decent chance that was an error
   #> produced somewhere else.
-  if(is.na(intercept)) {
-    adj_icc <- NA
-    unadjc_icc <- NA
-    attr(adj_icc, "note") <- "No random intercept was found in model; ICC was not
-    calculated"
-    attr(unadj_icc, "note") <- "No random intercept was found in model; ICC was not
-    calculated"
+  if (is.na(intercept)) {
+    adj_icc   <- NA_real_
+    unadj_icc <- NA_real_
 
-    warning("misc_lmer() found no random intercept term in the lmer model and the
-    ICC was not computed. Check model if a random intercept was expected.")
+    attr(adj_icc,   "note") <- "No random intercept was found in model; ICC was not calculated."
+    attr(unadj_icc, "note") <- "No random intercept was found in model; ICC was not calculated."
+
+    warning(
+      "misc_lmer() found no random intercept term in the lmer model; ",
+      "the ICCs were not computed. Check the model if a random intercept was expected."
+    )
   }
 
   #> number of groups of the grouping variable (if family_id = number of differnt
@@ -1091,5 +1092,3 @@ grab_misc <- function(model_list) {
 
   return(model_list)
 }
-
-

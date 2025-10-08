@@ -67,28 +67,55 @@ pcol <- function(cf) {
 }
 
 
-#' p-value formatter
+#' Format p-values
 #'
-#' Formats p-values with fixed digits and \code{"< 0.001"} threshold.
+#' Formats p-values with fixed digits and uses the conventional
+#' threshold display \code{"< 0.001"} for very small values.
+#'
+#' @param p Numeric vector of p-values.
+#' @param digits Integer scalar; number of digits to print after the decimal
+#'   for p-values \eqn{\ge} 0.001. Default is 3.
+#'
+#' @return A character vector the same length as \code{p}.
+#'
+#' @examples
+#' format_p(c(NA, 0.25, 0.0499, 0.001, 0.0007))
+#'
 #' @keywords formatting
 #' @export
 format_p <- function(p, digits = 3) {
-  ifelse(is.na(p), NA_character_,
-         ifelse(p < .001, "< 0.001", formatC(p, digits = digits, format = "f")))
+  ifelse(
+    is.na(p), NA_character_,
+    ifelse(p < .001, "< 0.001", formatC(p, digits = digits, format = "f"))
+  )
 }
 
 
-#' significance stars
+#' Significance stars
 #'
-#' Returns "", ".", "*", "**", or "***" based on p-value.
+#' Returns conventional significance markers based on p-value:
+#' \code{""}, \code{"."}, \code{"*"}, \code{"**"}, or \code{"***"}.
+#'
+#' @param p Numeric vector of p-values.
+#'
+#' @return A character vector the same length as \code{p} containing the markers.
+#'
+#' @examples
+#' sig_stars(c(NA, 0.20, 0.08, 0.049, 0.009, 0.0004))
+#'
 #' @keywords formatting
 #' @export
 sig_stars <- function(p) {
-  ifelse(is.na(p), "",
-         ifelse(p < .001, "***",
-                ifelse(p < .01,  "**",
-                       ifelse(p < .05,  "*",
-                              ifelse(p < .1,   ".", "")))))
+  ifelse(
+    is.na(p), "",
+    ifelse(p < .001, "***",
+           ifelse(p < .01,  "**",
+                  ifelse(p < .05,  "*",
+                         ifelse(p < .1, ".", "")
+                  )
+           )
+    )
+  )
 }
 
 

@@ -482,7 +482,7 @@ rename_lmer <- function(model, data, rename_vec = NULL) {
   #> Grabbing the specific model information
   mr <- model
   ms <- summary(mr)
-  fixed_effects <- .grab_fixed_effects(mr, include_intercept = FALSE)
+  fixed_effects <- grab_fixed_effects(mr, include_intercept = FALSE)
   #> NOTE: The intercept will still be included in output, but I just don't
   #> include the intercept in my renaming vector here.
 
@@ -621,7 +621,7 @@ rename_lmers <- function(model_list, rename_vec, data, model_path) {
     #grabbing the model results, model summary, and fixed effects
     mr <- safe_pluck(current_mls, model_path) #model results
     ms <- summary(mr) #model summary
-    fe <- .grab_fixed_effects(mr)
+    fe <- grab_fixed_effects(mr)
 
     if(is.null(mr)) {
       message("No model results were found for:",

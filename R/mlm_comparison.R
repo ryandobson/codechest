@@ -758,8 +758,8 @@ print.mlm_report <- function(x, digits = 2, max_terms = 6,
       df <- df_num
       if ("P_Chisq" %in% names(df)) {
         pnum <- suppressWarnings(as.numeric(df[["P_Chisq"]]))
-        df[["P_Chisq"]] <- .format_p(pnum)
-        df[["Sig"]]     <- .sig_stars(pnum)
+        df[["P_Chisq"]] <- format_p(pnum)
+        df[["Sig"]]     <- sig_stars(pnum)
       }
       num_cols <- vapply(df, is.numeric, logical(1))
       df[num_cols] <- lapply(df[num_cols], function(v) formatC(v, digits = digits, format = "f"))
@@ -775,7 +775,7 @@ print.mlm_report <- function(x, digits = 2, max_terms = 6,
       if (identical(st$type, "ri_versus_fixed") && "P_Chisq" %in% names(df_num)) {
         p_last <- suppressWarnings(tail(as.numeric(df_num$P_Chisq), 1))
         if (length(p_last) && is.finite(p_last)) {
-          cat(sprintf("  Chi-bar(1/2) adjustment: p/2 = %s\n", .format_p(p_last/2)))
+          cat(sprintf("  Chi-bar(1/2) adjustment: p/2 = %s\n", format_p(p_last/2)))
         }
       }
     }
