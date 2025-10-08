@@ -37,9 +37,9 @@ utils::globalVariables(c("formula", "model.frame", "terms"))
 #'
 #' @return A length-1 character vector with the dependent variable name.
 #' @importFrom stats formula
-#' @keywords internal
-#' @noRd
-.grab_dv <- function(model) {
+#' @keywords lm_helper
+#' @export
+grab_dv <- function(model) {
   f <- formula(model)
   #the dependent variable is the first variable in the formula
   dv <- all.vars(f)[1]
@@ -86,8 +86,9 @@ utils::globalVariables(c("formula", "model.frame", "terms"))
 #'
 #' @importFrom stats formula terms
 #' @importFrom lme4 nobars
-#' @keywords internal
-.grab_fixed_effects <- function(model, include_intercept = FALSE) {
+#' @keywords lm_helper
+#' @export
+grab_fixed_effects <- function(model, include_intercept = FALSE) {
   # Accept a model or a formula
   f <- if (inherits(model, "formula")) model else formula(model)
 
@@ -125,9 +126,9 @@ utils::globalVariables(c("formula", "model.frame", "terms"))
 #' @return A length-1 character string giving the grouping factor name.
 #' @importFrom lme4 VarCorr
 #' @importFrom stats model.frame
-#' @keywords internal
-#' @noRd
-.grab_random_int_group <- function(model) {
+#' @keywords lm_helper
+#' @export
+grab_random_int_group <- function(model) {
   stopifnot(inherits(model, "lmerMod"))
   ri_name <- names(VarCorr(model))[1]
   ri_vals <- model.frame(model)[[ri_name]]
@@ -154,9 +155,9 @@ utils::globalVariables(c("formula", "model.frame", "terms"))
 #'
 #' @details P-values are obtained from \code{summary(model)$coefficients}. The
 #'   p-value column is located dynamically.
-#' @keywords internal
-#' @noRd
-.grab_int_coefs <- function(model, alpha = .10, var = "all_interactions") {
+#' @keywords lm_helper
+#' @export
+grab_int_coefs <- function(model, alpha = .10, var = "all_interactions") {
 
   #> The purpose of this function is to take a variable and to grab all of its
   #> interaction terms in a model.
@@ -176,7 +177,7 @@ utils::globalVariables(c("formula", "model.frame", "terms"))
   coefs$variable <- rownames(coefs)
 
   #grab name of p column
-  p_col <- .pcol(coefs)
+  p_col <- pcol(coefs)
 
   # default empty char vector (never return NULL)
   output <- character(0)
@@ -401,7 +402,7 @@ drop_nonsig_int_effects <- function(
   style <- .detect_style(fixed_effects)
 
   #grabs the specific terms where the variable is interacting with other variables
-  int_terms <- .grab_int_coefs(model = model,
+  int_terms <- grab_int_coefs(model = model,
                                alpha = alpha,
                                var = var)
 
@@ -773,7 +774,7 @@ drop_main_effect <- function(fixed_effects, drop_effect) {
 #' @return If \code{sig_value} is \code{NULL}, a numeric p-value; otherwise a logical.
 #' @keywords internal
 #' @noRd
-.check_significance <- function(model, var, sig_value = NULL) {
+check_significance <- function(model, var, sig_value = NULL) {
 
   #grab model summary and turn it into a data frame with the variables as a new
   #column name to work with
@@ -781,7 +782,7 @@ drop_main_effect <- function(fixed_effects, drop_effect) {
   coefs <- as.data.frame(ms$coefficients)
   coefs$variable <- rownames(coefs)
 
-  p_col <- .pcol(coefs)
+  p_col <- pcol(coefs)
 
   #grab the p-value
   output <- coefs[coefs$variable == var, p_col]

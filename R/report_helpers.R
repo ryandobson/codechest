@@ -57,9 +57,9 @@ init_history <- function() {list()}
 #' @param cf A matrix or data frame of coefficients with column names.
 #'
 #' @return A length-1 character string giving the p-value column name.
-#' @keywords internal
-#' @noRd
-.pcol <- function(cf) {
+#' @keywords formatting
+#' @export
+pcol <- function(cf) {
   cn <- colnames(cf)              # works for matrix or data.frame
   ix <- grep("^Pr\\(>.*\\)$", cn) # matches "Pr(>|t|)" or "Pr(>|z|)"
   if (!length(ix)) stop("No p-value column found")
@@ -67,23 +67,23 @@ init_history <- function() {list()}
 }
 
 
-#' Internal p-value formatter
+#' p-value formatter
 #'
 #' Formats p-values with fixed digits and \code{"< 0.001"} threshold.
-#' @keywords internal
-#' @noRd
-.format_p <- function(p, digits = 3) {
+#' @keywords formatting
+#' @export
+format_p <- function(p, digits = 3) {
   ifelse(is.na(p), NA_character_,
          ifelse(p < .001, "< 0.001", formatC(p, digits = digits, format = "f")))
 }
 
 
-#' Internal significance stars
+#' significance stars
 #'
 #' Returns "", ".", "*", "**", or "***" based on p-value.
-#' @keywords internal
-#' @noRd
-.sig_stars <- function(p) {
+#' @keywords formatting
+#' @export
+sig_stars <- function(p) {
   ifelse(is.na(p), "",
          ifelse(p < .001, "***",
                 ifelse(p < .01,  "**",
