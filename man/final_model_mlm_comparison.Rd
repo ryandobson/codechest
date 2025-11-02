@@ -2,26 +2,50 @@
 % Please edit documentation in R/mlm_comparison.R
 \name{final_model_mlm_comparison}
 \alias{final_model_mlm_comparison}
-\title{Extract the Final (Kept) Model from a History}
+\title{Extract the Final Fitted Model from an MLM Comparison History}
 \usage{
-final_model_mlm_comparison(H)
+final_model_mlm_comparison(mlm_history)
 }
 \arguments{
-\item{H}{A history list produced by \code{\link{mlm_comparison}} and
-augmented by \code{\link{append_step_mlm_comparison}}.}
+\item{mlm_history}{A list object representing the model comparison history
+(typically returned by \code{\link[=mlm_comparison]{mlm_comparison()}}). Must contain one or more step
+entries created via \code{\link[=append_step_mlm_comparison]{append_step_mlm_comparison()}}.}
 }
 \value{
-The fitted model object designated as final (typically an \code{lmerMod}
-or \code{lm} object), or \code{NULL} if \code{H} is empty.
+The final fitted model object stored in the last \code{"final_model"} step.
+If no \code{"final_model"} step is found, returns the \code{model1} from the last
+available step.
+Returns \code{NULL} (with a warning) if the history object is empty.
 }
 \description{
-Returns the kept model from the last step in a history, preferably the entry
-tagged as \code{type == "final_model"}. If the last step is not \code{"final_model"},
-a warning is issued and that step's \code{model1} is returned.
+Retrieves the final retained model object (usually a fitted
+\code{\link[lmerTest:lmer]{lmerTest::lmer()}} model) from a multilevel model comparison history
+created by \code{\link[=mlm_comparison]{mlm_comparison()}}.
+}
+\details{
+This function is a lightweight helper designed to recover the final model
+selected in a stepwise model comparison workflow.
+It locates the most recent step of type \code{"final_model"} within the stored
+\code{mlm_history} object. If no \code{"final_model"} step exists, it returns the
+\code{model1} component of the last recorded step, with a warning.
 }
 \examples{
-# Given a populated history H:
-# final_fit <- final_model_mlm_comparison(H)
+\dontrun{
+# Example workflow
+history <- mlm_comparison(
+  data = sleepstudy,
+  dv = "Reaction",
+  fixed_effects = "Days",
+  random_effects = c("1", "Days"),
+  group = "Subject"
+)
+
+# Extract final retained model
+final_mod <- final_model_mlm_comparison(history)
+summary(final_mod)
+}
 
 }
-\keyword{internal}
+\seealso{
+\code{\link[=mlm_comparison]{mlm_comparison()}}, \code{\link[=append_step_mlm_comparison]{append_step_mlm_comparison()}}
+}

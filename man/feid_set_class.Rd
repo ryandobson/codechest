@@ -17,9 +17,11 @@ Adds the class \code{"fe_int_drop_history"} to an existing object (typically
 a list of logged steps) so methods and printers can recognize it.
 }
 \examples{
+\dontrun{
 H <- list()
 H <- feid_set_class(H)
 class(H)
+}
 
 }
 \keyword{internal}

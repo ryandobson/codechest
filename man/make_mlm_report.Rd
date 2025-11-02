@@ -2,18 +2,68 @@
 % Please edit documentation in R/mlm_comparison.R
 \name{make_mlm_report}
 \alias{make_mlm_report}
-\title{Build an \code{mlm_report} object}
+\title{Create a Structured Report Object from an MLM Comparison History}
 \usage{
-make_mlm_report(history, title = NULL)
+make_mlm_report(history, title = NULL, verbosity = c("short", "long"))
 }
 \arguments{
-\item{history}{A list of steps produced by \code{mlm_comparison()}.}
+\item{history}{A list object created by \code{\link[=mlm_comparison]{mlm_comparison()}} and updated
+through \code{\link[=append_step_mlm_comparison]{append_step_mlm_comparison()}}. Must contain at least one
+recorded step.}
 
-\item{title}{Optional report title.}
+\item{title}{Optional character string giving the report title.
+Defaults to \code{"Mixed Model Random-Effects Comparison"}.}
+
+\item{verbosity}{Character string indicating the level of report detail.
+Must be one of \code{"short"} or \code{"long"}. Defaults to \code{"short"}.}
 }
 \value{
-An object of class \code{mlm_report}.
+An object of class \code{"mlm_report"}, containing:
+\describe{
+\item{\code{title}}{Report title used in output.}
+\item{\code{steps}}{A list of extracted step summaries (one per comparison).}
+\item{\code{verbosity}}{Character string indicating the desired reporting depth.}
+}
+The \code{"mlm_report"} object can be passed to higher-level rendering or
+formatting functions (e.g., \code{print.mlm_report()} or \code{save_apa_mlm_report()}).
 }
 \description{
-Convert an \code{mlm_comparison()} history list into a structured report for printing.
+Converts a full model comparison \code{history} (produced by \code{\link[=mlm_comparison]{mlm_comparison()}})
+into a standardized report object of class \code{"mlm_report"}.
+The resulting object stores key information about each comparison step
+(e.g., dropped effects, retained models, test statistics) and can be
+rendered or summarized in APA-style tables using downstream functions.
+}
+\details{
+The report provides a compact representation of all model-building steps
+for reproducible documentation and reporting.
+It extracts core elements from each step in the \code{history} object—such as
+model types, random-effects transitions, dropped terms, and comparison
+outcomes—and stores them in a consistent structure suitable for export,
+tabulation, or diagnostic display.
+
+The internal helper \code{.anova_to_df()} is used to safely convert likelihood
+ratio test results into data-frame form for inclusion in the report.
+}
+\examples{
+\dontrun{
+# Fit and compare models
+hist_obj <- mlm_comparison(
+  data = sleepstudy,
+  dv = "Reaction",
+  fixed_effects = "Days",
+  random_effects = c("1", "Days"),
+  group = "Subject"
+)
+
+# Create structured report
+report <- make_mlm_report(hist_obj, title = "Random-Effects Model Comparison")
+
+# Inspect structure
+str(report, max.level = 1)
+}
+
+}
+\seealso{
+\code{\link[=mlm_comparison]{mlm_comparison()}}, \code{\link[=append_step_mlm_comparison]{append_step_mlm_comparison()}}, \code{\link[=run_mlm_comparisons]{run_mlm_comparisons()}}
 }

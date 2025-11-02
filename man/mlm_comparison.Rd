@@ -2,7 +2,7 @@
 % Please edit documentation in R/mlm_comparison.R
 \name{mlm_comparison}
 \alias{mlm_comparison}
-\title{Iterative Random-Effects Structure Comparison for Mixed Models}
+\title{Stepwise Random-Effects Structure Comparison for Multilevel Models}
 \usage{
 mlm_comparison(
   data,
@@ -13,74 +13,115 @@ mlm_comparison(
   model_env = NULL,
   history = NULL,
   counter = 1,
-  allow_drop_intercept = FALSE
+  allow_drop_intercept = FALSE,
+  verbose = FALSE
 )
 }
 \arguments{
-\item{data}{A data frame containing all variables referenced in the model.}
+\item{data}{A data frame containing all model variables.}
 
-\item{dv}{Character scalar; dependent variable name.}
+\item{dv}{Character string. The dependent variable name.}
 
-\item{fixed_effects}{Character vector of fixed-effect terms (may include interactions).}
+\item{fixed_effects}{Character vector of fixed-effect predictors.}
 
-\item{random_effects}{Character vector of random-effect terms (include \code{"1"} for RI).}
+\item{random_effects}{Character vector specifying random effects
+(e.g., \code{c("1", "slope1", "slope2")}).
+Must include \code{"1"} to specify a random intercept.}
 
-\item{group}{Character scalar; grouping variable for random effects.}
+\item{group}{Character string naming the grouping factor (e.g., \code{"id"}).}
 
-\item{model_env}{Optional environment for the created formulas (default: new env with
-\code{globalenv()} as parent if \code{NULL}).}
+\item{model_env}{Optional environment in which to evaluate the model
+formula. Useful when constructing formulas dynamically. Defaults to \code{NULL}.}
 
-\item{history}{Optional existing history list; if \code{NULL}, a new history is created.}
+\item{history}{Optional list created by \code{\link[=init_history]{init_history()}} that stores the
+stepwise model comparison record. If \code{NULL}, a new history object is
+initialized automatically.}
 
-\item{counter}{Integer step counter for logging (default \code{1}).}
+\item{counter}{Integer index of the current step in the recursive process.
+Defaults to \code{1}. Generally used internally.}
 
-\item{allow_drop_intercept}{Logical; if \code{TRUE}, RI vs fixed comparison is allowed.}
+\item{allow_drop_intercept}{Logical. If \code{TRUE}, allows testing whether
+the random intercept can be dropped (i.e., compare random-intercept-only
+vs fixed-effects-only model). Defaults to \code{FALSE}.}
+
+\item{verbose}{Logical. If \code{TRUE}, prints progress messages describing
+each comparison step and decision to the console. Defaults to \code{FALSE}.}
 }
 \value{
-A \emph{history} list (log book) of steps, ending with an explicit
-\code{type = "final_model"} entry. Use \code{\link{final_model_mlm_comparison}} to retrieve
-the kept fit.
+A \code{history} list containing all model comparison steps appended by
+\code{\link[=append_step_mlm_comparison]{append_step_mlm_comparison()}}.
+The returned object includes metadata attributes:
+\describe{
+\item{\code{attr(., "last_step")}}{Numeric index of the final step.}
+\item{\code{attr(., "last_action")}}{String indicating the type of last action.}
+\item{\code{attr(., "timestamp")}}{POSIXct time when the final step was logged.}
+}
+Each entry of \code{history} contains:
+\itemize{
+\item \code{model1}, \code{model2}: compared model objects (typically from \code{\link[lmerTest:lmer]{lmerTest::lmer()}}).
+\item \code{mod_comp}: ANOVA comparison results.
+\item \code{dropped}, \code{kept}: random-effect terms removed or retained.
+\item \code{next_action}: string describing next comparison step.
+}
 }
 \description{
-Automates a pragmatic workflow for simplifying and comparing random-effects
-structures in mixed-effects models:
-\enumerate{
-\item Fit the starting model with \strong{uncorrelated} random effects.
-\item If there are random slopes, iteratively drop the smallest-variance slope and
-compare via LRT; accept the simpler model if \eqn{p > .20}.
-\item If a drop is not accepted (\eqn{p \le .20}), compare uncorrelated vs
-correlated random effects; accept the simpler uncorrelated model if
-\eqn{p > .20}, else the correlated model.
-\item If only a random intercept is present:
-\itemize{
-\item If \code{allow_drop_intercept = TRUE}, compare RI-lmer vs fixed-effects lm
-using the chi-bar 1/2 adjustment (accept lm if \code{(p/2) > .20}).
-\item Otherwise, keep RI.
-}
-}
+Performs a structured, semi-automated model comparison procedure for
+multilevel models (typically fit via \code{\link[lmerTest:lmer]{lmerTest::lmer()}}) to determine
+the optimal random-effects structure.
+The function iteratively compares nested models—dropping random slopes,
+testing covariance inclusion, or comparing random-intercept-only
+versus fixed-effects-only models—while logging all decisions in a
+reproducible \code{history} object.
 }
 \details{
-Uses \code{\link{build_formula}} to construct formulas, \code{lmerTest::lmer} to fit
-mixed models (\code{REML = FALSE}), and \code{\link{drop_smallest_term}} (which calls
-\code{\link{extract_smallest_slope}}) for slope-dropping steps. Model comparisons are
-performed via \code{anova(model1, model2)}.
+This function is designed to automate common multilevel model comparison
+workflows where the researcher sequentially simplifies or expands the random
+effects structure based on likelihood ratio tests.
+
+It supports the following step types:
+\itemize{
+\item \strong{initial_model:} fits the full random-effects structure.
+\item \strong{drop_smallest:} drops the least-variant random slope term.
+\item \strong{add_covariances:} tests whether allowing random-effect
+covariances improves model fit.
+\item \strong{ri_versus_fixed:} compares random-intercept-only vs.
+fixed-effects-only models.
+\item \strong{final_model:} logs the final retained model.
+}
+
+Each step is recorded via \code{\link[=append_step_mlm_comparison]{append_step_mlm_comparison()}}, producing
+a structured \code{history} list with all comparisons, p-values, retained
+models, and metadata.
+
+The function is recursive: when \code{p > .20} and further reduction is possible,
+it automatically calls itself with the updated random-effects specification.
 }
 \examples{
 \dontrun{
-H <- mlm_comparison(
-  data = df,
-  dv = "y",
-  fixed_effects = c("x1", "x2"),
-  random_effects = c("1", "x1", "x2"),
-  group = "id",
-  allow_drop_intercept = FALSE
+library(lme4)
+data(sleepstudy)
+
+# Define random and fixed effects
+dv <- "Reaction"
+fixed_effects <- "Days"
+random_effects <- c("1", "Days")
+group <- "Subject"
+
+# Run stepwise model comparison
+hist_obj <- mlm_comparison(
+  data = sleepstudy,
+  dv = dv,
+  fixed_effects = fixed_effects,
+  random_effects = random_effects,
+  group = group,
+  verbose = TRUE
 )
-final_fit <- final_model_mlm_comparison(H)
+
+# Review summary of retained steps
+str(hist_obj, max.level = 1)
 }
 
 }
 \seealso{
-\code{\link{build_formula}}, \code{\link{drop_smallest_term}},
-\code{\link{extract_smallest_slope}}, \code{\link{final_model_mlm_comparison}},
-\code{\link{append_step_mlm_comparison}}, \code{\link{init_history}}
+\code{\link[=append_step_mlm_comparison]{append_step_mlm_comparison()}}, \code{\link[=anova]{anova()}}, \code{\link[lmerTest:lmer]{lmerTest::lmer()}}
 }

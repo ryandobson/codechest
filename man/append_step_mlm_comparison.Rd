@@ -2,65 +2,120 @@
 % Please edit documentation in R/mlm_comparison.R
 \name{append_step_mlm_comparison}
 \alias{append_step_mlm_comparison}
-\title{Append a Step to the Model-Comparison History}
+\title{Append a Step to the Multilevel Model Comparison History}
 \usage{
 append_step_mlm_comparison(
-  H,
+  history,
   step,
   type,
   model1,
   model2 = NULL,
   random_from,
-  random_to = NULL,
+  random_to,
   dropped = NA_character_,
   mod_comp = NULL,
   kept = "",
-  next_action = "",
-  zero_pad = 2
+  next_action = "stop",
+  verbose = TRUE
 )
 }
 \arguments{
-\item{H}{A history list (typically from \code{\link{init_history}}).}
+\item{history}{A list object storing prior model comparison steps.
+Each element is itself a list containing details about one comparison step.}
 
-\item{step}{Integer step index (e.g., 0 for initial model).}
+\item{step}{Integer or numeric value representing the current step number.}
 
-\item{type}{Character tag describing the step type. One of
-\code{"initial_model"}, \code{"drop_smallest"}, \code{"ri_vs_fixed"},
-\code{"add_covariances"}, \code{"final_model"}.}
+\item{type}{Character string specifying the type of step (e.g.,
+\code{"initial_model"}, \code{"drop_smallest"}, \code{"add_covariances"},
+\code{"ri_versus_fixed"}, \code{"final_model"}). Used for labeling and ordering.}
 
-\item{model1}{The primary (often more complex) fitted model object for the step.}
+\item{model1}{The first model in the comparison (typically the simpler model).}
 
-\item{model2}{The comparator fitted model object for the step (or \code{NULL}).}
+\item{model2}{The second model in the comparison (optional; defaults to \code{NULL}).}
 
-\item{random_from}{Character vector of random-effects terms before the step.}
+\item{random_from}{Character vector of random effects in the prior model.}
 
-\item{random_to}{Character vector of random-effects terms after the step (or \code{NULL}).}
+\item{random_to}{Character vector of random effects in the updated model.}
 
-\item{dropped}{Character scalar; name of the random slope dropped on this step (if any).}
+\item{dropped}{Character string naming the random effect term that was dropped.
+Defaults to \code{NA_character_} when no term was dropped.}
 
-\item{mod_comp}{The model-comparison object (e.g., \code{anova(model1, model2)}) or \code{NULL}.}
+\item{mod_comp}{Optional model comparison result object (e.g., from \code{\link[=anova]{anova()}}).
+Can be stored for later reporting or extraction.}
 
-\item{kept}{Character scalar indicating which model was retained at this step:
-\code{"m1"}, \code{"m2"}, or \code{""} for non-comparison steps.}
+\item{kept}{Character string indicating which model was retained (e.g., \code{"m1"} or \code{"m2"}).
+Defaults to an empty string.}
 
-\item{next_action}{Character scalar hint for the next step:
-\code{"drop_smallest"}, \code{"add_covariances"}, \code{"ri_vs_fixed"}, or \code{"stop"}.}
+\item{next_action}{Character string describing the next planned step in the pipeline
+(e.g., \code{"stop"}, \code{"drop_next"}, \code{"add_covariances"}). Defaults to \code{"stop"}.}
 
-\item{zero_pad}{Integer; number of digits for zero-padding the step name in the history.}
+\item{verbose}{Logical. If \code{TRUE} (default), prints a human-readable message
+describing the appended step to the console.}
 }
 \value{
-The updated history list \code{H} with a new named element. The name
-is constructed as \code{stepXX_type} and optionally includes \code{"_drop_<term>"}.
+An updated \code{history} list containing the newly appended step.
+The object includes ordered step names, updated attributes:
+\describe{
+\item{\code{attr(., "last_step")}}{The last step number added.}
+\item{\code{attr(., "last_action")}}{The type of the last recorded action.}
+\item{\code{attr(., "timestamp")}}{The system time when the last step was appended.}
+}
 }
 \description{
-Adds a named entry to a history list with metadata describing the action taken
-during iterative random-effects model comparison.
+Appends a new step entry to a structured model comparison \code{history} object.
+Each entry records the state of a model comparison process (e.g., random effect
+dropped, covariance added, or final model reached) and can be used to reconstruct
+or audit the progression of a multilevel modeling workflow.
+}
+\details{
+This function is primarily used internally by stepwise model-building or
+comparison pipelines. It maintains an ordered list of model comparison steps,
+each labeled and time-stamped, with metadata for tracking which effects were
+dropped, retained, or compared.
+
+The resulting \code{history} object can be printed, summarized, or saved as a
+reproducible record of decisions made during iterative model refinement.
+
+Key features include:
+\itemize{
+\item Automatic creation of unique step names (e.g., \code{"step03_drop_slope1"}).
+\item Chronological ordering of steps based on numeric \code{step} index.
+\item Metadata attributes for traceability (\code{last_step}, \code{last_action}, \code{timestamp}).
+\item Optional verbose printing for live progress tracking in the console.
+}
 }
 \examples{
-H <- init_history()
-H <- append_step_mlm_comparison(H, step = 0, type = "initial_model",
-                 model1 = NULL, random_from = "1")
-names(H)
+\dontrun{
+# Initialize an empty history list
+history <- list()
+
+# Append an initial model step
+history <- append_step_mlm_comparison(
+  history = history,
+  step = 1,
+  type = "initial_model",
+  model1 = "m1",
+  random_from = c("(1|id)", "(1|group)"),
+  random_to = c("(1|id)", "(1|group)"),
+  next_action = "drop_smallest"
+)
+
+# Append a model comparison step
+history <- append_step_mlm_comparison(
+  history = history,
+  step = 2,
+  type = "drop_smallest",
+  model1 = "m1",
+  model2 = "m2",
+  random_from = c("(1|id)", "(1|group)"),
+  random_to = c("(1|id)"),
+  dropped = "(1|group)",
+  kept = "m1",
+  next_action = "final_model"
+)
+}
 
 }
-\keyword{internal}
+\seealso{
+\code{\link[=anova]{anova()}}, \code{\link[lme4:lmer]{lme4::lmer()}}, \code{\link[=apa_anova_comparison]{apa_anova_comparison()}}
+}

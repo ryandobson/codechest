@@ -22,6 +22,7 @@ Imports:
     dplyr,
     kableExtra,
     psych,
+    lavaan,
     tibble,
     ggplot2,
     DescTools,
@@ -29,6 +30,9 @@ Imports:
     rlang,
     haven,
     lme4,
-    lmerTest
+    lmerTest,
+    emmeans,
+    flextable,
+    officer
 Depends: 
     R (>= 4.1.0)

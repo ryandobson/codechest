@@ -12,15 +12,18 @@
 #' @return \code{x} with class \code{"fe_int_drop_history"} prepended.
 #'
 #' @examples
+#' \dontrun{
 #' H <- list()
 #' H <- feid_set_class(H)
 #' class(H)
+#' }
 #'
 #' @keywords internal
 feid_set_class <- function(x) {
   class(x) <- unique(c("fe_int_drop_history", class(x)))
   x
 }
+
 
 
 #' Log a step in the fixed-effect interaction dropping workflow

@@ -2,7 +2,7 @@
 % Please edit documentation in R/mlm_comparison.R
 \name{print.mlm_report}
 \alias{print.mlm_report}
-\title{Print method for \code{mlm_report}}
+\title{Print Method for \code{mlm_report} Objects}
 \usage{
 \method{print}{mlm_report}(
   x,
@@ -14,18 +14,65 @@
 )
 }
 \arguments{
-\item{x}{An \code{mlm_report} object.}
+\item{x}{An object of class \code{"mlm_report"}, typically created by
+\code{\link[=make_mlm_report]{make_mlm_report()}}.}
 
-\item{digits}{Number formatting digits for numeric columns.}
+\item{digits}{Integer specifying the number of decimal places for
+numeric output. Defaults to \code{2}.}
 
-\item{max_terms}{Maximum RE terms to show before truncating.}
+\item{max_terms}{Integer specifying how many random-effect terms to
+display before truncating with an ellipsis. Defaults to \code{6}.}
 
-\item{width}{Output width.}
+\item{width}{Numeric. Output width passed to \code{cat()} for formatting
+separators. Defaults to \code{getOption("width")}.}
 
-\item{alpha}{Significance level used for annotations (informational).}
+\item{alpha}{Numeric significance threshold used for annotating results
+(currently used internally when displaying p-values). Defaults to \code{0.05}.}
 
-\item{...}{Ignored.}
+\item{...}{Additional arguments (ignored, for method compatibility).}
+}
+\value{
+Invisibly returns the input \code{"mlm_report"} object after printing its formatted
+summary to the console.
 }
 \description{
-Pretty-prints the stepwise comparison, including ANOVA tables and decisions.
+Nicely formats and prints an \code{"mlm_report"} object created by \code{\link[=make_mlm_report]{make_mlm_report()}},
+displaying a step-by-step summary of the multilevel model comparison process.
+The output can be shown in either \code{"short"} or \code{"long"} form, depending on
+the verbosity level stored in the report.
+}
+\details{
+This print method is primarily for console output and diagnostic review.
+In \code{"short"} mode, it provides a compact overview of key model comparison steps
+(initial model, comparison count, decisions, and final model).
+In \code{"long"} mode, it displays detailed per-step output, including likelihood ratio
+test tables, random-effects structures, and decision rationale based on model
+comparisons.
+
+The method automatically detects covariance comparisons (\code{add_covariances})
+and annotates the final model as correlated or uncorrelated when possible.
+}
+\examples{
+\dontrun{
+# Fit models and generate comparison report
+hist_obj <- mlm_comparison(
+  data = sleepstudy,
+  dv = "Reaction",
+  fixed_effects = "Days",
+  random_effects = c("1", "Days"),
+  group = "Subject"
+)
+report <- make_mlm_report(hist_obj, title = "Random-Effects Model Comparison")
+
+# Print in long form
+print(report, digits = 3)
+
+# Print in short summary mode
+report$verbosity <- "short"
+print(report)
+}
+
+}
+\seealso{
+\code{\link[=make_mlm_report]{make_mlm_report()}}, \code{\link[=mlm_comparison]{mlm_comparison()}}, \code{\link[=append_step_mlm_comparison]{append_step_mlm_comparison()}}
 }
