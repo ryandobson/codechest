@@ -1090,6 +1090,195 @@ save_apa_lmer_tables <- function(model_list,
 
 
 
+#' Create an APA-style summary table for fixed-effect reduction
+#'
+#' Generates a formatted \code{flextable} summarizing the iterative process of
+#' fixed-effect reduction from a mixed-effects model, as tracked by a
+#' \code{"fixed_effect_drop_history"} object (produced by
+#' \code{\link{fixed_effect_drops}}). The table concisely displays the
+#' random-effect structures at each stage and the fixed effects removed at
+#' each iteration, suitable for inclusion in reports, manuscripts, or
+#' supplemental materials.
+#'
+#' @param history An object of class \code{"fixed_effect_drop_history"} created
+#'   by \code{\link{fixed_effect_drops}} or added to a model list via
+#'   \code{\link{run_fixed_effect_drops}}.
+#' @param bold_title Character scalar giving the main (bold) title of the table.
+#'   Defaults to \code{"Table"}.
+#' @param italics_title Character scalar giving the secondary (italicized) title.
+#'   Defaults to \code{"Fixed-Effect Reduction Process"}.
+#' @param table_note Optional character string providing a note placed below the
+#'   table. The final model fitting method (e.g., REML or ML) is automatically
+#'   appended.
+#' @param font_size Numeric value specifying the base font size for all table
+#'   text. Defaults to \code{10}.
+#' @param font Character scalar specifying the font family to use. Defaults to
+#'   \code{"Times New Roman"}.
+#'
+#' @details
+#' This function internally calls \code{\link{print.fed}} with
+#' \code{verbose = FALSE} to extract key model-reduction details while
+#' suppressing console output. It then constructs a two-column APA-style
+#' \code{flextable} showing:
+#' \itemize{
+#'   \item The random-effects structure in the initial, intermediate, and final models.
+#'   \item Each fixed-effect term removed at successive steps.
+#'   \item A note summarizing the final model fitting method.
+#' }
+#'
+#' @return A formatted \code{flextable} object containing:
+#' \describe{
+#'   \item{Description}{A narrative label describing each step.}
+#'   \item{Details}{The corresponding random or fixed-effect terms.}
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' fed_hist <- fixed_effect_drops(
+#'   model             = fit,
+#'   fixed_effects     = fes,
+#'   remove            = "menses",
+#'   new_random_effect = "menses",
+#'   alpha             = 0.10,
+#'   data              = df
+#' )
+#'
+#' apa_fed_report(fed_hist)
+#' }
+#'
+#' @seealso
+#' \code{\link{fixed_effect_drops}},
+#' \code{\link{run_fixed_effect_drops}},
+#' \code{\link{print.fed}},
+#' \code{\link[flextable]{flextable}}
+#'
+#' @export
 
+apa_fed_report <- function(history,
+                           bold_title = "Table",
+                           italics_title = "Fixed-Effect Reduction Process",
+                           table_note = "",
+                           font_size = 10,
+                           font = "Times New Roman") {
+
+  # Validate input class
+  stopifnot(inherits(history, "fixed_effect_drop_history"))
+
+  # Capture the returned list from print.fed() without printing to console
+  pm <- suppressMessages({
+    tmp <- capture.output(res <- print.fed(history, verbose = FALSE))
+    res
+  })
+  # --- Random effects ---
+  re_init  <- pm$random_effects$initial$string
+  re_final <- pm$random_effects$final$string
+
+  mid_names <- setdiff(names(pm$random_effects$by_step),
+                       c("s00_initial_model", "s02_final_model"))
+  re_mid <- if (length(mid_names)) {
+    pm$random_effects$by_step[[mid_names[1]]]$string
+  } else "(none)"
+
+  # --- Fixed effects removed ---
+  removed_by_step <- pm$fixed_effects_removed_by_step
+  nsteps <- length(removed_by_step)
+
+  label_steps <- function(i) {
+    c("First removal", "Second removal", "Third removal")[i] %||% paste("Step", i)
+  }
+
+  descs <- character(nsteps)
+  details <- character(nsteps)
+
+  for (i in seq_len(nsteps)) {
+    descs[i] <- label_steps(i)
+    rmv <- removed_by_step[[i]]
+    if (length(rmv) == 0) rmv <- "(none)"
+    details[i] <- paste(rmv, collapse = ", ")
+  }
+
+  # Replace final "(none)" with narrative sentence
+  if (details[length(details)] == "(none)") {
+    details[length(details)] <- "No new effects identified as non-significant after refitting."
+  }
+
+  # --- Combine all rows ---
+  df <- data.frame(
+    Description = c(
+      "Random effects in initial model",
+      "Random-effect structure after addition",
+      descs,
+      "Final model random-effect structure"
+    ),
+    Details = c(
+      re_init,
+      re_mid,
+      details,
+      re_final
+    ),
+    stringsAsFactors = FALSE
+  )
+
+  # --- Clean text ---
+  clean_text <- function(x) {
+    x <- gsub("(?<!\n)\n(?!\n)", " ", x, perl = TRUE)
+    x <- gsub(" {2,}", " ", x)
+    trimws(x)
+  }
+
+  bold_title_clean <- clean_text(bold_title)
+  italics_title_clean <- clean_text(italics_title)
+  table_note_clean <- clean_text(table_note)
+
+  # --- Build flextable ---
+  ft <- flextable::flextable(df)
+
+  # --- Add APA-style stacked headers ---
+  ft <- flextable::add_header_row(ft, values = italics_title_clean,
+                                  colwidths = rep(ncol(df), 1))
+  ft <- flextable::add_header_row(ft, values = bold_title_clean,
+                                  colwidths = rep(ncol(df), 1))
+  ft <- flextable::merge_at(ft, i = 1, j = 1:ncol(df), part = "header")
+  ft <- flextable::merge_at(ft, i = 2, j = 1:ncol(df), part = "header")
+  ft <- flextable::align(ft, i = 1:2, j = 1, part = "header", align = "left")
+  ft <- flextable::bold(ft, i = 1, part = "header", bold = TRUE)
+  ft <- flextable::italic(ft, i = 2, part = "header", italic = TRUE)
+
+  # --- Align and style body ---
+  ft <- flextable::align(ft, j = "Description", align = "left", part = "body")
+  ft <- flextable::align(ft, j = "Details", align = "left", part = "body")
+  ft <- flextable::align(ft, i = 3, part = "header", align = "center")
+  ft <- flextable::italic(ft, i = 3, part = "header", italic = TRUE)
+
+  ft <- flextable::border_remove(ft)
+  std_border <- officer::fp_border(color = "black", width = 1)
+  ft <- flextable::hline(ft, i = 2, border = std_border, part = "header")
+  ft <- flextable::hline(ft, i = 3, border = std_border, part = "header")
+  ft <- flextable::hline_bottom(ft, border = std_border, part = "body")
+
+  # --- Add footer note with final fit method ---
+  footer_note <- paste0("Final model fit method: ", pm$final_method)
+  if (nzchar(table_note_clean))
+    footer_note <- paste(table_note_clean, footer_note, sep = "  ")
+
+  ft <- flextable::add_footer_lines(ft, values = rep("", ncol(df)))
+  ft <- flextable::compose(
+    ft, i = 1, j = 1, part = "footer",
+    value = flextable::as_paragraph(
+      flextable::as_i("Note. "),
+      footer_note
+    )
+  )
+  ft <- flextable::merge_at(ft, i = 1, j = 1:ncol(df), part = "footer")
+  ft <- flextable::align(ft, align = "left", part = "footer")
+  ft <- flextable::fontsize(ft, part = "footer", size = font_size)
+
+  # --- Font, layout, and fit ---
+  ft <- flextable::set_table_properties(ft, layout = "autofit", width = .76)
+  ft <- flextable::font(ft, fontname = font, part = "all")
+  ft <- flextable::fontsize(ft, size = font_size, part = "all")
+
+  ft
+}
 
 
