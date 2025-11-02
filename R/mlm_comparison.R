@@ -526,11 +526,22 @@ mlm_comparison <- function (data, dv, fixed_effects, random_effects, group, mode
   else {
     "drop_smallest"
   }
-  history <- append_step_mlm_comparison(history, step = 0,
-                                        type = "initial_model", model1 = model1, model2 = NULL,
-                                        random_from = random_effects, random_to = random_effects,
-                                        mod_comp = NULL, kept = "", next_action = next_action_step0,
-                                        verbose = verbose)
+
+  # Only add the initial_model step if this is the *first* call
+  # (prevents duplicate "Initial Model" entries in recursive calls)
+  if (length(history) == 0L) {
+
+    history <- append_step_mlm_comparison(
+      history, step = 0,
+      type = "initial_model",
+      model1 = model1, model2 = NULL,
+      random_from = random_effects, random_to = random_effects,
+      mod_comp = NULL, kept = "",
+      next_action = next_action_step0,
+      verbose = verbose
+    )
+  }  #  END of conditional addition
+
   if (length(random_effects) == 1 && identical(random_effects[1],
                                                "1")) {
     if (!allow_drop_intercept) {
@@ -785,7 +796,6 @@ final_model_mlm_comparison <- function(mlm_history) {
 #' [mlm_comparison()], [append_step_mlm_comparison()]
 #'
 #' @export
-
 run_mlm_comparisons <- function (model_list, model_env = NULL, data = NULL, verbose = FALSE)
 {
   if (is.null(model_env)) {
