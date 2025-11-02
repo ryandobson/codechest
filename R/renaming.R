@@ -447,6 +447,7 @@ create_nice_names <- function(model_effects,
 #'
 #' @importFrom stats confint
 #' @family renaming_helpers
+#' @export
 rename_lmer <- function(model, data, rename_vec = NULL) {
 
   #> this function is useful to call in itself, but it only operates on a single
@@ -581,6 +582,7 @@ rename_lmer <- function(model, data, rename_vec = NULL) {
 #'
 #' @seealso \code{\link{rename_lmer}}, \code{\link{create_nice_names}}
 #' @family renaming_helpers
+#' @export
 rename_lmers <- function(model_list, rename_vec, data, model_path) {
 
   #> NOTE: this function (or rather, the rename_lmer() function) can also handle
