@@ -374,11 +374,11 @@ fixed_effect_drops <- function(model,
 #'         simple nested accessor (via \code{fes_path} and \code{data_path}), then
 #'         the data frame is resolved by \code{get()}.
 #'   \item \code{\link{fixed_effect_drops}} is called with these inputs.
-#'   \item The returned history is saved as \code{model_list[[i]]$mc_menses}.
+#'   \item The returned history is saved as \code{model_list[[i]]fedx1}.
 #' }
 #'
 #' @return The input \code{model_list} with an additional element
-#'   \code{$mc_menses} attached to each processed entry, containing the
+#'   \code{$fed_x1} attached to each processed entry, containing the
 #'   step-by-step history (class \code{"fixed_effect_drop_history"}).
 #'
 #' @examples
@@ -417,7 +417,7 @@ run_fixed_effect_drops <- function(
   }
 
   if (is.null(output_path)) {
-    output_path <- paste0("fed", remove)
+    output_path <- paste0("fed_", remove)
   }
 
   safe_pluck <- function(x, path) {
