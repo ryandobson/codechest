@@ -931,6 +931,7 @@ run_apa_lmer_model <- function(model_list,
                                data = NULL,
                                data_path = "data",
                                nice_names = NULL,
+                               model_path = NULL,
                                bold_title = "Table",
                                italics_title = "",
                                table_note = "",
@@ -945,6 +946,12 @@ run_apa_lmer_model <- function(model_list,
     Reduce(function(acc, nm) acc[[nm]], path, init = x)
   }
 
+  if(is.null(model_path)) {
+   stop("The path where the model is stored in the model list must be
+                  supplied")
+  }
+
+
   for (i in seq_along(model_list)) {
 
 
@@ -958,7 +965,8 @@ run_apa_lmer_model <- function(model_list,
         bold_title_i <- paste(bold_title, i)
       }
 
-    model_i <- final_model_fed(model_list[[i]]$mc_menses)
+
+    model_i <- final_model_fed(model_list[[i]][[model_path]])
 
     if (is.null(data)) { #if I don't supply a df that is used across models,
       #then use the path that must be specified
