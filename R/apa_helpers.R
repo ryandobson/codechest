@@ -1116,7 +1116,7 @@ save_apa_lmer_tables <- function(model_list,
 #'   \code{"Times New Roman"}.
 #'
 #' @details
-#' This function internally calls \code{\link{print.fed}} with
+#' This function internally calls \code{\link{print.fixed_effect_drop_history}} with
 #' \code{verbose = FALSE} to extract key model-reduction details while
 #' suppressing console output. It then constructs a two-column APA-style
 #' \code{flextable} showing:
@@ -1149,7 +1149,7 @@ save_apa_lmer_tables <- function(model_list,
 #' @seealso
 #' \code{\link{fixed_effect_drops}},
 #' \code{\link{run_fixed_effect_drops}},
-#' \code{\link{print.fed}},
+#' \code{\link{print.fixed_effect_drop_history}},
 #' \code{\link[flextable]{flextable}}
 #'
 #' @export
@@ -1164,9 +1164,9 @@ apa_fed_report <- function(history,
   # Validate input class
   stopifnot(inherits(history, "fixed_effect_drop_history"))
 
-  # Capture the returned list from print.fed() without printing to console
+  # Capture the returned list from print.fixed_effect_drop_history() without printing to console
   pm <- suppressMessages({
-    tmp <- capture.output(res <- print.fed(history, verbose = FALSE))
+    tmp <- capture.output(res <- print.fixed_effect_drop_history(history, verbose = FALSE))
     res
   })
   # --- Random effects ---

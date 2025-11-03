@@ -51,7 +51,7 @@ each iteration, suitable for inclusion in reports, manuscripts, or
 supplemental materials.
 }
 \details{
-This function internally calls \code{\link{print.fed}} with
+This function internally calls \code{\link{print.fixed_effect_drop_history}} with
 \code{verbose = FALSE} to extract key model-reduction details while
 suppressing console output. It then constructs a two-column APA-style
 \code{flextable} showing:
@@ -79,6 +79,6 @@ apa_fed_report(fed_hist)
 \seealso{
 \code{\link{fixed_effect_drops}},
 \code{\link{run_fixed_effect_drops}},
-\code{\link{print.fed}},
+\code{\link{print.fixed_effect_drop_history}},
 \code{\link[flextable]{flextable}}
 }

@@ -61,7 +61,7 @@ Defaults to \code{"fed<remove>"} if \code{NULL}.}
 }
 \value{
 The input \code{model_list} with an additional element
-\code{$mc_menses} attached to each processed entry, containing the
+\code{$fed_x1} attached to each processed entry, containing the
 step-by-step history (class \code{"fixed_effect_drop_history"}).
 }
 \description{
@@ -79,7 +79,7 @@ For each element \code{i} of \code{model_list}:
 simple nested accessor (via \code{fes_path} and \code{data_path}), then
 the data frame is resolved by \code{get()}.
 \item \code{\link{fixed_effect_drops}} is called with these inputs.
-\item The returned history is saved as \code{model_list[[i]]$mc_menses}.
+\item The returned history is saved as \code{model_list[[i]]fedx1}.
 }
 }
 \examples{

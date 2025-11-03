@@ -494,9 +494,9 @@ run_fixed_effect_drops <- function(
 #'
 #' @seealso \code{\link{fixed_effect_drops}}, \code{\link{final_model_fed}}
 #' @family print_helpers
-#' @method print fed
+#' @method print fixed_effect_drop_history
 #' @export
-print.fed <- function(x, width = getOption("width"), verbose = TRUE, ...) {
+print.fixed_effect_drop_history <- function(x, width = getOption("width"), verbose = TRUE, ...) {
 
   history <- x
   stopifnot(inherits(history, "fixed_effect_drop_history"), is.list(history))

@@ -33,6 +33,6 @@ Other print_helpers:
 \code{\link{.re_corr_status}()},
 \code{\link{.re_terms_from_model}()},
 \code{\link{.wrapcat}()},
-\code{\link{print.fed}()}
+\code{\link{print.fixed_effect_drop_history}()}
 }
 \concept{print_helpers}
