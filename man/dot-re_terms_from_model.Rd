@@ -33,6 +33,6 @@ Other print_helpers:
 \code{\link{.re_corr_status}()},
 \code{\link{.step_label}()},
 \code{\link{.wrapcat}()},
-\code{\link{print_mc_menses}()}
+\code{\link{print.fed}()}
 }
 \concept{print_helpers}

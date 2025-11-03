@@ -22,7 +22,7 @@ run_apa_lmer_model(
 \arguments{
 \item{model_list}{A named list of model specifications, each containing a
 model comparison object (\verb{$mc_menses}) from which the final model can be
-extracted via \code{\link[=final_model_feid]{final_model_feid()}}.}
+extracted via \code{\link[=final_model_fed]{final_model_fed()}}.}
 
 \item{data}{Optional data frame used for all models. If \code{NULL}, each model’s
 dataset is retrieved via \code{data_path}.}
@@ -61,7 +61,7 @@ Each \verb{$apa_table} is a formatted \strong{flextable} returned by \code{\link
 }
 \description{
 Iterates over a list of model specifications, extracts the final fitted model
-from each (via \code{\link[=final_model_feid]{final_model_feid()}}), and produces APA-style \strong{flextable}
+from each (via \code{\link[=final_model_fed]{final_model_fed()}}), and produces APA-style \strong{flextable}
 outputs using \code{\link[=apa_lmer_model]{apa_lmer_model()}}.
 Each formatted table is added back into the model list under the element
 \verb{$apa_table}.
@@ -95,5 +95,5 @@ results$Model1$apa_table
 
 }
 \seealso{
-\code{\link[=apa_lmer_model]{apa_lmer_model()}}, \code{\link[=final_model_feid]{final_model_feid()}}, \code{\link[flextable:flextable]{flextable::flextable()}}
+\code{\link[=apa_lmer_model]{apa_lmer_model()}}, \code{\link[=final_model_fed]{final_model_fed()}}, \code{\link[flextable:flextable]{flextable::flextable()}}
 }

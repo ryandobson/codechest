@@ -35,6 +35,6 @@ Other print_helpers:
 \code{\link{.re_corr_status}()},
 \code{\link{.re_terms_from_model}()},
 \code{\link{.step_label}()},
-\code{\link{print_mc_menses}()}
+\code{\link{print.fed}()}
 }
 \concept{print_helpers}

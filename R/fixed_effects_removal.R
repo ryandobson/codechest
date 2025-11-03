@@ -1,4 +1,5 @@
 
+utils::globalVariables(c("capture.output"))
 
 
 
@@ -361,7 +362,10 @@ fixed_effect_drops <- function(model,
 #'   The data frame is retrieved via \code{get()} in the parent frame.
 #' @param name_path Character vector of names describing where to find a label
 #'   for the entry. Default \code{"name"}. (Currently not used; reserved for logging prefixes.)
-#'
+#' @param output_path Optional character string. Name of the list element
+#'   under which to store the fixed-effect drop history for each model.
+#'   Defaults to \code{"fed<remove>"} if \code{NULL}.
+
 #' @details
 #' For each element \code{i} of \code{model_list}:
 #' \enumerate{
@@ -475,9 +479,9 @@ run_fixed_effect_drops <- function(
 #'
 #' @return Invisibly returns a list with:
 #'   \itemize{
-#'     \item \code{$random_effects} — a list of random-effect structures by step.
-#'     \item \code{$fixed_effects_removed_by_step} — fixed effects removed at each step.
-#'     \item \code{$final_method} — fitting method used in the final model.
+#'     \item \code{$random_effects}  a list of random-effect structures by step.
+#'     \item \code{$fixed_effects_removed_by_step} fixed effects removed at each step.
+#'     \item \code{$final_method}  fitting method used in the final model.
 #'   }
 #'
 #' @examples
@@ -568,7 +572,7 @@ print.fed <- function(x, width = getOption("width"), verbose = TRUE, ...) {
   cat(strrep("=", nchar(title_line)), "\n\n", sep = "")
 
   # ---- Print sections ----
-  cat("Random effects (initial → final)\n")
+  cat("Random effects (initial to final)\n")
   .wrapcat("  Initial: ", paste0(re_strings[[initial_idx]]), width)
   mid_ix <- setdiff(seq_along(steps), c(initial_idx, final_idx))
   if (length(mid_ix)) {
@@ -585,7 +589,7 @@ print.fed <- function(x, width = getOption("width"), verbose = TRUE, ...) {
     rem <- removed_by_step[[i]]
     cat("  - ", nm, ":\n", sep = "")
     if (!length(rem)) cat("      (none)\n")
-    else for (r in rem) cat("      • ", r, "\n", sep = "")
+    else for (r in rem) cat("      \u2022 ", r, "\n", sep = "")
   }
 
   # Final method

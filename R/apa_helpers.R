@@ -863,7 +863,7 @@ apa_lmer_model <- function(model, data,
 #'
 #' @description
 #' Iterates over a list of model specifications, extracts the final fitted model
-#' from each (via [final_model_feid()]), and produces APA-style **flextable**
+#' from each (via [final_model_fed()]), and produces APA-style **flextable**
 #' outputs using [apa_lmer_model()].
 #' Each formatted table is added back into the model list under the element
 #' `$apa_table`.
@@ -881,7 +881,7 @@ apa_lmer_model <- function(model, data,
 #'
 #' @param model_list A named list of model specifications, each containing a
 #'   model comparison object (`$mc_menses`) from which the final model can be
-#'   extracted via [final_model_feid()].
+#'   extracted via [final_model_fed()].
 #' @param data Optional data frame used for all models. If `NULL`, each model’s
 #'   dataset is retrieved via `data_path`.
 #' @param data_path Character string specifying the nested path to the data
@@ -924,7 +924,7 @@ apa_lmer_model <- function(model, data,
 #' }
 #'
 #' @seealso
-#' [apa_lmer_model()], [final_model_feid()], [flextable::flextable()]
+#' [apa_lmer_model()], [final_model_fed()], [flextable::flextable()]
 #'
 #' @export
 run_apa_lmer_model <- function(model_list,
@@ -958,7 +958,7 @@ run_apa_lmer_model <- function(model_list,
         bold_title_i <- paste(bold_title, i)
       }
 
-    model_i <- final_model_feid(model_list[[i]]$mc_menses)
+    model_i <- final_model_fed(model_list[[i]]$mc_menses)
 
     if (is.null(data)) { #if I don't supply a df that is used across models,
       #then use the path that must be specified
