@@ -2,71 +2,91 @@
 % Please edit documentation in R/apa_helpers.R
 \name{apa_mlm_report}
 \alias{apa_mlm_report}
-\title{Create an APA-Style Report from a Multilevel Model Comparison}
+\title{Create an APA-Style Summary Table for Multilevel Model Comparisons}
 \usage{
 apa_mlm_report(
   mlm_report,
-  title = NULL,
+  bold_title = "Table",
+  italics_title = "Mixed Model Random-Effects Comparison",
   font = "Times New Roman",
   font_size = 11,
   sig_level = 0.05
 )
 }
 \arguments{
-\item{mlm_report}{An object of class \code{"mlm_report"} created by
-\code{\link[=make_mlm_report]{make_mlm_report()}}.}
+\item{mlm_report}{An object of class \code{"mlm_report"}, typically created by
+\code{\link[=make_mlm_report]{make_mlm_report()}} after running \code{\link[=mlm_comparison]{mlm_comparison()}}.}
 
-\item{title}{Optional character string specifying the report title.
-Defaults to the title stored in \code{mlm_report$title} or
-\code{"Mixed Model Random-Effects Comparison"}.}
+\item{bold_title}{Character string specifying the top (bold) title.
+Defaults to \code{"Table"}.}
 
-\item{font}{Character string specifying the font name to be applied
-throughout the table. Defaults to \code{"Times New Roman"}.}
+\item{italics_title}{Character string specifying the italic subtitle.
+Defaults to \code{"Mixed Model Random-Effects Comparison"}.}
 
-\item{font_size}{Numeric font size applied to all table text.
+\item{font}{Character string specifying the font name applied to all text.
+Defaults to \code{"Times New Roman"}.}
+
+\item{font_size}{Numeric value for font size applied to all text.
 Defaults to \code{11}.}
 
-\item{sig_level}{Numeric significance threshold used for bolding results
-in the ANOVA sub-tables. Defaults to \code{0.05}.}
+\item{sig_level}{Numeric significance threshold passed to
+\code{\link[=apa_anova_comparison]{apa_anova_comparison()}} for bolding p-values in sub-tables.
+Defaults to \code{0.05}.}
 }
 \value{
-If \code{mlm_report$verbosity == "short"}, returns a single \strong{flextable} object
-summarizing the model comparison steps.
-If \code{mlm_report$verbosity == "long"}, returns a named list of \strong{flextable}
-objects with:
+Depending on the verbosity level in \code{mlm_report}:
 \describe{
-\item{\code{summary}}{Overview of all model comparison steps.}
-\item{\code{comparison_X}}{APA-style likelihood ratio test tables for each step.}
+\item{\code{"short"}}{Returns a single \strong{flextable} object containing the
+APA-style summary of random-effects decisions.}
+\item{\code{"long"}}{Returns a list of \strong{flextable} objects with:
+\itemize{
+\item \verb{$summary} – the summary table of model comparison steps, and
+\item \verb{$comparison_X} – one or more sub-tables from
+\code{\link[=apa_anova_comparison]{apa_anova_comparison()}} for each model comparison.
+}}
 }
-In both cases, the returned object is assigned the class \code{"apa_mlm_report"}.
 }
 \description{
-Converts an \code{"mlm_report"} object (from \code{\link[=make_mlm_report]{make_mlm_report()}}) into one or more
-formatted \strong{flextable} objects suitable for publication in APA-style tables.
-The output can include both a concise summary of the model comparison sequence
-and detailed ANOVA-style tables for each likelihood ratio test.
+Generates a publication-ready \strong{flextable} summarizing the stepwise
+random-effects model comparison process (e.g., random-slope removal,
+covariance testing). Designed to provide concise APA-style reporting
+of the model-building sequence produced by \code{\link[=mlm_comparison]{mlm_comparison()}} and
+organized via \code{\link[=make_mlm_report]{make_mlm_report()}}.
+
+The resulting table displays:
+\itemize{
+\item A \strong{bold title} (e.g., "Random Effects Decision Process: EP_PRCPSMSy").
+\item An \strong{italic subtitle} (e.g., "Mixed Model Random-Effects Comparison").
+\item A single \strong{Description} column listing each model comparison step
+in plain text (e.g., "Comparison 2: Add covariances | kept: m2").
+\item Three horizontal lines: one below the subtitle, one below the
+column header ("Description"), and one at the table's bottom.
+}
+
+The function can operate in either \code{"short"} or \code{"long"} mode:
+\describe{
+\item{\code{"short"}}{Produces only the summary table described above.}
+\item{\code{"long"}}{Includes the summary table plus one APA-formatted
+likelihood-ratio comparison table per model step, created via
+\code{\link[=apa_anova_comparison]{apa_anova_comparison()}}.}
+}
 }
 \details{
-The function generates publication-ready \strong{flextable} objects summarizing
-the stepwise model comparison process conducted via \code{\link[=mlm_comparison]{mlm_comparison()}}.
-Depending on the report’s verbosity level (\code{"short"} or \code{"long"}), the output
-may include:
-
+Titles and subtitles are cleaned using an internal \code{clean_text()} helper
+to trim excess whitespace and newlines. Borders and alignment are formatted
+to match APA style conventions:
 \itemize{
-\item A \strong{summary table} describing each model comparison step
-(initial model, random-slope drops, covariance tests, final model).
-\item A series of \strong{likelihood ratio test tables}, formatted with
-\code{\link[=apa_anova_comparison]{apa_anova_comparison()}}, showing fit statistics (AIC, BIC, -2LL, χ², p).
+\item Bold title and italic subtitle are left-aligned with no lines above.
+\item Plain header ("Description") separates the title block and table body.
+\item Lines are drawn only (1) below the subtitle, (2) below the header,
+and (3) below the final row.
 }
-
-In \code{"short"} mode, only a compact summary of the model sequence is displayed.
-In \code{"long"} mode, both the summary and individual ANOVA comparison tables are returned.
 }
 \examples{
 \dontrun{
 library(lme4)
 
-# Stepwise model comparison
+# Run stepwise model comparison
 hist_obj <- mlm_comparison(
   data = sleepstudy,
   dv = "Reaction",
@@ -78,15 +98,13 @@ hist_obj <- mlm_comparison(
 # Generate report structure
 report <- make_mlm_report(hist_obj)
 
-# Create APA-style flextable output
-apa_tables <- apa_mlm_report(report)
-
-# Inspect summary table
-apa_tables$summary
+# Create APA-style table (short summary only)
+apa_tbl <- apa_mlm_report(report, verbosity = "short")
+apa_tbl
 }
 
 }
 \seealso{
 \code{\link[=make_mlm_report]{make_mlm_report()}}, \code{\link[=mlm_comparison]{mlm_comparison()}}, \code{\link[=apa_anova_comparison]{apa_anova_comparison()}},
-\code{\link[flextable:flextable]{flextable::flextable()}}
+\code{\link[flextable:flextable]{flextable::flextable()}}, \code{\link[officer:fp_border]{officer::fp_border()}}
 }

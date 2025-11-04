@@ -200,58 +200,76 @@ apa_anova_comparison <- function(anova_table,
 
 
 
-#' @title Create an APA-Style Report from a Multilevel Model Comparison
+#' @title Create an APA-Style Summary Table for Multilevel Model Comparisons
 #'
 #' @description
-#' Converts an `"mlm_report"` object (from [make_mlm_report()]) into one or more
-#' formatted **flextable** objects suitable for publication in APA-style tables.
-#' The output can include both a concise summary of the model comparison sequence
-#' and detailed ANOVA-style tables for each likelihood ratio test.
+#' Generates a publication-ready **flextable** summarizing the stepwise
+#' random-effects model comparison process (e.g., random-slope removal,
+#' covariance testing). Designed to provide concise APA-style reporting
+#' of the model-building sequence produced by [mlm_comparison()] and
+#' organized via [make_mlm_report()].
+#'
+#' The resulting table displays:
+#' \itemize{
+#'   \item A **bold title** (e.g., "Random Effects Decision Process: EP_PRCPSMSy").
+#'   \item An **italic subtitle** (e.g., "Mixed Model Random-Effects Comparison").
+#'   \item A single **Description** column listing each model comparison step
+#'         in plain text (e.g., "Comparison 2: Add covariances | kept: m2").
+#'   \item Three horizontal lines: one below the subtitle, one below the
+#'         column header ("Description"), and one at the table's bottom.
+#' }
+#'
+#' The function can operate in either `"short"` or `"long"` mode:
+#' \describe{
+#'   \item{`"short"`}{Produces only the summary table described above.}
+#'   \item{`"long"`}{Includes the summary table plus one APA-formatted
+#'   likelihood-ratio comparison table per model step, created via
+#'   [apa_anova_comparison()].}
+#' }
 #'
 #' @details
-#' The function generates publication-ready **flextable** objects summarizing
-#' the stepwise model comparison process conducted via [mlm_comparison()].
-#' Depending on the report’s verbosity level (`"short"` or `"long"`), the output
-#' may include:
-#'
+#' Titles and subtitles are cleaned using an internal `clean_text()` helper
+#' to trim excess whitespace and newlines. Borders and alignment are formatted
+#' to match APA style conventions:
 #' \itemize{
-#'   \item A **summary table** describing each model comparison step
-#'         (initial model, random-slope drops, covariance tests, final model).
-#'   \item A series of **likelihood ratio test tables**, formatted with
-#'         [apa_anova_comparison()], showing fit statistics (AIC, BIC, -2LL, χ², p).
+#'   \item Bold title and italic subtitle are left-aligned with no lines above.
+#'   \item Plain header ("Description") separates the title block and table body.
+#'   \item Lines are drawn only (1) below the subtitle, (2) below the header,
+#'         and (3) below the final row.
 #' }
 #'
-#' In `"short"` mode, only a compact summary of the model sequence is displayed.
-#' In `"long"` mode, both the summary and individual ANOVA comparison tables are returned.
-#'
-#' @param mlm_report An object of class `"mlm_report"` created by
-#'   [make_mlm_report()].
-#' @param title Optional character string specifying the report title.
-#'   Defaults to the title stored in `mlm_report$title` or
-#'   `"Mixed Model Random-Effects Comparison"`.
-#' @param font Character string specifying the font name to be applied
-#'   throughout the table. Defaults to `"Times New Roman"`.
-#' @param font_size Numeric font size applied to all table text.
+#' @param mlm_report An object of class `"mlm_report"`, typically created by
+#'   [make_mlm_report()] after running [mlm_comparison()].
+#' @param bold_title Character string specifying the top (bold) title.
+#'   Defaults to `"Table"`.
+#' @param italics_title Character string specifying the italic subtitle.
+#'   Defaults to `"Mixed Model Random-Effects Comparison"`.
+#' @param font Character string specifying the font name applied to all text.
+#'   Defaults to `"Times New Roman"`.
+#' @param font_size Numeric value for font size applied to all text.
 #'   Defaults to `11`.
-#' @param sig_level Numeric significance threshold used for bolding results
-#'   in the ANOVA sub-tables. Defaults to `0.05`.
+#' @param sig_level Numeric significance threshold passed to
+#'   [apa_anova_comparison()] for bolding p-values in sub-tables.
+#'   Defaults to `0.05`.
 #'
 #' @return
-#' If `mlm_report$verbosity == "short"`, returns a single **flextable** object
-#' summarizing the model comparison steps.
-#' If `mlm_report$verbosity == "long"`, returns a named list of **flextable**
-#' objects with:
+#' Depending on the verbosity level in `mlm_report`:
 #' \describe{
-#'   \item{`summary`}{Overview of all model comparison steps.}
-#'   \item{`comparison_X`}{APA-style likelihood ratio test tables for each step.}
+#'   \item{`"short"`}{Returns a single **flextable** object containing the
+#'   APA-style summary of random-effects decisions.}
+#'   \item{`"long"`}{Returns a list of **flextable** objects with:
+#'     \itemize{
+#'       \item `$summary` – the summary table of model comparison steps, and
+#'       \item `$comparison_X` – one or more sub-tables from
+#'         [apa_anova_comparison()] for each model comparison.
+#'     }}
 #' }
-#' In both cases, the returned object is assigned the class `"apa_mlm_report"`.
 #'
 #' @examples
 #' \dontrun{
 #' library(lme4)
 #'
-#' # Stepwise model comparison
+#' # Run stepwise model comparison
 #' hist_obj <- mlm_comparison(
 #'   data = sleepstudy,
 #'   dv = "Reaction",
@@ -263,20 +281,19 @@ apa_anova_comparison <- function(anova_table,
 #' # Generate report structure
 #' report <- make_mlm_report(hist_obj)
 #'
-#' # Create APA-style flextable output
-#' apa_tables <- apa_mlm_report(report)
-#'
-#' # Inspect summary table
-#' apa_tables$summary
+#' # Create APA-style table (short summary only)
+#' apa_tbl <- apa_mlm_report(report, verbosity = "short")
+#' apa_tbl
 #' }
 #'
 #' @seealso
 #' [make_mlm_report()], [mlm_comparison()], [apa_anova_comparison()],
-#' [flextable::flextable()]
+#' [flextable::flextable()], [officer::fp_border()]
 #'
 #' @export
 apa_mlm_report <- function(mlm_report,
-                           title = NULL,
+                           bold_title = "Table",
+                           italics_title = "Mixed Model Random-Effects Comparison",
                            font = "Times New Roman",
                            font_size = 11,
                            sig_level = 0.05) {
@@ -284,11 +301,16 @@ apa_mlm_report <- function(mlm_report,
     stop("Package 'flextable' is required for apa_mlm_report().", call. = FALSE)
   }
 
-
   verbosity <- mlm_report$verbosity %||% "long"
-  main_title <- title %||% mlm_report$title %||% "Mixed Model Random-Effects Comparison"
 
   # --- helper functions ---
+  clean_text <- function(x) {
+    # trim leading/trailing whitespace and condense multiple spaces/newlines
+    x <- gsub("\\s+", " ", x)
+    x <- gsub("\n+", "\n", x)
+    trimws(x)
+  }
+
   .final_is_correlated <- function(steps, idx) {
     if (idx <= 1) return(NA)
     prev <- steps[[idx - 1L]]
@@ -313,21 +335,27 @@ apa_mlm_report <- function(mlm_report,
       label <- switch(st$type,
                       initial_model = sprintf("Initial model: %s (uncorrelated)", .show_vec(st$random_from)),
                       drop_smallest = {
-                        comp_num <- sum(vapply(mlm_report$steps[seq_len(i)],
-                                               function(s) s$type %in% c("drop_smallest", "add_covariances", "ri_versus_fixed"),
-                                               logical(1)))
+                        comp_num <- sum(vapply(
+                          mlm_report$steps[seq_len(i)],
+                          function(s) s$type %in% c("drop_smallest", "add_covariances", "ri_versus_fixed"),
+                          logical(1)
+                        ))
                         sprintf("Comparison %d: Remove random slope | kept: %s", comp_num, st$kept)
                       },
                       add_covariances = {
-                        comp_num <- sum(vapply(mlm_report$steps[seq_len(i)],
-                                               function(s) s$type %in% c("drop_smallest", "add_covariances", "ri_versus_fixed"),
-                                               logical(1)))
+                        comp_num <- sum(vapply(
+                          mlm_report$steps[seq_len(i)],
+                          function(s) s$type %in% c("drop_smallest", "add_covariances", "ri_versus_fixed"),
+                          logical(1)
+                        ))
                         sprintf("Comparison %d: Add covariances | kept: %s", comp_num, st$kept)
                       },
                       ri_versus_fixed = {
-                        comp_num <- sum(vapply(mlm_report$steps[seq_len(i)],
-                                               function(s) s$type %in% c("drop_smallest", "add_covariances", "ri_versus_fixed"),
-                                               logical(1)))
+                        comp_num <- sum(vapply(
+                          mlm_report$steps[seq_len(i)],
+                          function(s) s$type %in% c("drop_smallest", "add_covariances", "ri_versus_fixed"),
+                          logical(1)
+                        ))
                         sprintf("Comparison %d: Random intercept vs fixed effects | kept: %s", comp_num, st$kept)
                       },
                       final_model = {
@@ -343,18 +371,59 @@ apa_mlm_report <- function(mlm_report,
     }
 
     df_summary <- data.frame(
-      Step = seq_along(step_texts),
       Description = step_texts,
       stringsAsFactors = FALSE
     )
 
-    ft_summary <- flextable(df_summary)
-    ft_summary <- set_caption(ft_summary, main_title)
-    ft_summary <- fontsize(ft_summary, size = font_size)
-    ft_summary <- font(ft_summary, fontname = font)
-    ft_summary <- autofit(ft_summary)
+    bold_title_clean <- clean_text(bold_title)
+    italics_title_clean <- clean_text(italics_title)
+
+    ft_summary <- flextable::flextable(df_summary)
+
+    # --- Build APA-style header block ---
+
+
+    ft_summary <- flextable::add_header_row(
+      ft_summary,
+      values = italics_title_clean,
+      colwidths = ncol(df_summary)
+    )
+
+    ft_summary <- flextable::add_header_row(
+      ft_summary,
+      values = bold_title_clean,
+      colwidths = ncol(df_summary)
+    )
+
+    ft_summary <- flextable::bold(ft_summary, i = 1, part = "header", bold = TRUE)
+    ft_summary <- flextable::align(ft_summary, i = 1, part = "header", align = "left")
+
+
+    ft_summary <- flextable::italic(ft_summary, i = 2, part = "header", italic = TRUE)
+    ft_summary <- flextable::align(ft_summary, i = 2, part = "header", align = "left")
+
+
+    # --- Remove all default borders first ---
+    ft_summary <- flextable::border_remove(ft_summary)
+
+    # define a thin visible border line
+    thin_line <- officer::fp_border(width = 1, color = "black")
+
+    # --- Add the three desired lines ---
+    # --- Add the three desired lines ---
+    ft_summary <- flextable::hline(ft_summary, i = 2, border = thin_line, part = "header")   # below italics title
+    ft_summary <- flextable::hline_top(ft_summary, border = thin_line, part = "body")        # below "Description"
+    ft_summary <- flextable::hline_bottom(ft_summary, border = thin_line, part = "body")     # bottom of table
+
+
+    # --- Formatting ---
+    ft_summary <- flextable::fontsize(ft_summary, size = font_size)
+    ft_summary <- flextable::font(ft_summary, fontname = font)
+    ft_summary <- flextable::autofit(ft_summary)
     ft_summary
   }
+
+
 
   # --- Short mode: only the summary table
   if (verbosity == "short") {
@@ -378,7 +447,6 @@ apa_mlm_report <- function(mlm_report,
       model1_str <- paste(.show_vec(st$random_from), corr1)
       model2_str <- paste(.show_vec(st$random_to), corr2)
 
-      # --- use mod_comp instead of comp_df ---
       if (!is.null(st$mod_comp)) {
         ft_anova <- apa_anova_comparison(
           anova_table = st$mod_comp,
@@ -1286,11 +1354,9 @@ apa_fed_report <- function(history,
 
   # --- Font, layout, and fit ---
   # --- Adjust column widths ---
-  if (all(c("Description", "Details") %in% names(df))) {
-    ft <- flextable::width(ft,
-                           j = "Description", width = 1.5,  # shorter
-                           j = "Details", width = 4.5)      # wider narrative column
-  }
+  # --- Adjust column widths ---
+  ft <- flextable::width(ft, j = "Description", width = 2)
+  ft <- flextable::width(ft,j = "Details", width = 4)
 
   # Optional: slightly wider overall layout
   ft <- flextable::set_table_properties(ft, layout = "autofit", width = 0.9)
