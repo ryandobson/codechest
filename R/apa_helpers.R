@@ -382,7 +382,7 @@ apa_mlm_report <- function(mlm_report,
       if (!is.null(st$mod_comp)) {
         ft_anova <- apa_anova_comparison(
           anova_table = st$mod_comp,
-          bold_title = sprintf("Comparison %d", comp_idx),
+          bold_title = sprintf("Random Effects Comparison %d", comp_idx),
           italics_title = sprintf(
             "Likelihood Ratio Test of Random Effects: Model 1 structure: %s; Model 2 structure: %s",
             model1_str, model2_str
@@ -888,6 +888,9 @@ apa_lmer_model <- function(model, data,
 #'   element within each model entry (e.g., `"data"`). Defaults to `"data"`.
 #' @param nice_names Optional named vector mapping original variable names to
 #'   user-friendly labels (passed to [apa_lmer_model()]).
+#' @param model_path Character string specifying the name of the element
+#'   within each model object that contains the APA flextable report.
+#'   Defaults to `"NULL"`.
 #' @param bold_title Character string specifying the base title (bolded in the table).
 #'   A numeric index is appended automatically. Defaults to `"Table"`.
 #' @param italics_title Character string specifying the italicized subtitle.

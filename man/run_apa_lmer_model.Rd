@@ -9,6 +9,7 @@ run_apa_lmer_model(
   data = NULL,
   data_path = "data",
   nice_names = NULL,
+  model_path = NULL,
   bold_title = "Table",
   italics_title = "",
   table_note = "",
@@ -32,6 +33,10 @@ element within each model entry (e.g., \code{"data"}). Defaults to \code{"data"}
 
 \item{nice_names}{Optional named vector mapping original variable names to
 user-friendly labels (passed to \code{\link[=apa_lmer_model]{apa_lmer_model()}}).}
+
+\item{model_path}{Character string specifying the name of the element
+within each model object that contains the APA flextable report.
+Defaults to \code{"NULL"}.}
 
 \item{bold_title}{Character string specifying the base title (bolded in the table).
 A numeric index is appended automatically. Defaults to \code{"Table"}.}
