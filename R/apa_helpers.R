@@ -1285,7 +1285,7 @@ apa_fed_report <- function(history,
   ft <- flextable::fontsize(ft, part = "footer", size = font_size)
 
   # --- Font, layout, and fit ---
-  ft <- flextable::set_table_properties(ft, layout = "autofit", width = .76)
+  ft <- flextable::set_table_properties(ft, layout = "autofit")
   ft <- flextable::font(ft, fontname = font, part = "all")
   ft <- flextable::fontsize(ft, size = font_size, part = "all")
 
