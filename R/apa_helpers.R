@@ -533,6 +533,7 @@ apa_mlm_report <- function(mlm_report,
 #' @export
 run_apa_mlm_report <- function(model_list,
                                mc_path = "mc",             # <- path to the mlm_comparison() output
+                               bold_title = "",
                                title_prefix = "Mixed Model Random-Effects Comparison: ",
                                font = "Times New Roman",
                                font_size = 11,
@@ -570,7 +571,8 @@ run_apa_mlm_report <- function(model_list,
     # make APA flextable(s)
     apa_report_i <- apa_mlm_report(
       mlm_report = report_i,
-      title = title_i,
+      bold_title = bold_title,
+      italics_title = title_i,
       font = font,
       font_size = font_size,
       sig_level = sig_level
