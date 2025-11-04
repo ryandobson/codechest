@@ -1285,7 +1285,15 @@ apa_fed_report <- function(history,
   ft <- flextable::fontsize(ft, part = "footer", size = font_size)
 
   # --- Font, layout, and fit ---
-  ft <- flextable::set_table_properties(ft, layout = "autofit")
+  # --- Adjust column widths ---
+  if (all(c("Description", "Details") %in% names(df))) {
+    ft <- flextable::width(ft,
+                           j = "Description", width = 1.5,  # shorter
+                           j = "Details", width = 4.5)      # wider narrative column
+  }
+
+  # Optional: slightly wider overall layout
+  ft <- flextable::set_table_properties(ft, layout = "autofit", width = 0.9)
   ft <- flextable::font(ft, fontname = font, part = "all")
   ft <- flextable::fontsize(ft, size = font_size, part = "all")
 
