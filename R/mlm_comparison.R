@@ -1,8 +1,8 @@
-
-utils::globalVariables(c("lm", "lmer", "VarCorr", "tail"))
-
-
-
+#' @importFrom stats lm
+#' @importFrom lmerTest lmer
+#' @importFrom lme4 VarCorr
+#' @importFrom utils tail
+NULL
 
 #' Extract the Random Slope with the Smallest Variance
 #'

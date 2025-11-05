@@ -1,4 +1,6 @@
-utils::globalVariables(c("unidim", "omega"))
+#' @importFrom psych unidim omega
+NULL
+
 
 
 #' Compute reliability for a single psychological scale

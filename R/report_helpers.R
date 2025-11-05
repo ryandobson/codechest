@@ -1,5 +1,74 @@
-utils::globalVariables(c("nobs", "logLik", "AIC", "BIC"))
+#' @importFrom stats formula nobs logLik AIC BIC
+#' @importFrom lme4 isREML
+NULL
 
+
+#' Format SEM Fit Indices for Word or APA Reports
+#'
+#' Creates a formatted character string summarizing key SEM model fit statistics
+#' (e.g., \eqn{\chi^2}, \eqn{CFI}, \eqn{TLI}, \eqn{RMSEA}, \eqn{SRMR}) from a
+#' lavaan-style fit summary object. The resulting text is ready for direct
+#' inclusion in Word tables, Quarto/Markdown, or APA-style reports.
+#'
+#' @param fit_summary A lavaan-style model summary (e.g., from
+#'   \code{lavaan::summary(fit, fit.measures = TRUE)}) containing fit indices.
+#'   Must include elements \code{chisq}, \code{df}, \code{pvalue}, \code{cfi},
+#'   \code{tli}, \code{rmsea}, \code{rmsea.ci.lower}, \code{rmsea.ci.upper},
+#'   and \code{srmr}.
+#' @param digits Integer; number of decimal places to round numeric fit indices
+#'   (default = 2).
+#'
+#' @return A single formatted character string summarizing model fit, e.g.:
+#' \preformatted{
+#' (χ^2(24) = 35.41, p = .083, CFI = .986, TLI = .972,
+#' RMSEA = .031, 90% CI [0.000, 0.055], SRMR = .021)
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' library(lavaan)
+#' fit <- cfa(HS.model, data = HolzingerSwineford1939)
+#' fs <- summary(fit, fit.measures = TRUE)
+#' format_sem_fit_word(fs)
+#' }
+#'
+#' @export
+format_sem_fit_word <- function(fit_summary, digits = 2) {
+  # Round and extract values
+  chi2 <- round(fit_summary$fit["chisq"], digits)
+  df <- fit_summary$fit["df"]
+  p_val <- fit_summary$fit["pvalue"]
+  cfi <- round(fit_summary$fit["cfi"], digits)
+  tli <- round(fit_summary$fit["tli"], digits)
+  rmsea <- round(fit_summary$fit["rmsea"], digits)
+  rmsea_low <- round(fit_summary$fit["rmsea.ci.lower"], digits)
+  rmsea_high <- round(fit_summary$fit["rmsea.ci.upper"], digits)
+  srmr <- round(fit_summary$fit["srmr"], digits)
+
+  # Smart formatting for RMSEA CI
+  rmsea_low_str <- format(ifelse(rmsea_low == 0, 0.00, rmsea_low), nsmall = 2)
+  rmsea_high_str <- format(ifelse(rmsea_high == 0, 0.00, rmsea_high), nsmall = 2)
+
+  # Format p
+  p_str <- ifelse(
+    p_val < .001,
+    "p < .001",
+    paste0("p = ", format(round(p_val, 3), nsmall = 3))
+  )
+
+  # Assemble the final string (ASCII-only)
+  fit_string <- paste0(
+    "(chi^2(", df, ") = ", chi2, ", ",
+    p_str, ", ",
+    "CFI = ", cfi, ", ",
+    "TLI = ", tli, ", ",
+    "RMSEA = ", rmsea, ", ",
+    "90% CI [", rmsea_low_str, ", ", rmsea_high_str, "], ",
+    "SRMR = ", srmr, ")"
+  )
+
+  return(fit_string)
+}
 
 
 

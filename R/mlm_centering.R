@@ -1,4 +1,3 @@
-#utils::globalVariables(c(""))
 
 
 #' Group-Mean Centering for Multiple Variables (Base R)

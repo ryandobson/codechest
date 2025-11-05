@@ -1,5 +1,5 @@
-utils::globalVariables(c("emtrends"))
-
+#' @importFrom emmeans emtrends
+NULL
 
 #' @title Extract and Tidy a Simple Slope from a Mixed-Effects Model
 #'

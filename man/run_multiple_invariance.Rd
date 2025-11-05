@@ -14,7 +14,8 @@ and the values are the model strings in \code{lavaan} syntax.}
 
 \item{group_vars}{A character vector specifying the grouping variables to test invariance against.}
 
-\item{verbose}{Whether or not to print}
+\item{verbose}{Whether or not to print output to track the progress of the invariance
+testing for each grouping variable. Default = 'TRUE'.}
 }
 \value{
 A list where each element corresponds to a specific model and grouping variable combination.

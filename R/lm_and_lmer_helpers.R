@@ -1,4 +1,6 @@
-utils::globalVariables(c("formula", "model.frame", "terms"))
+#' @importFrom stats formula terms model.frame setNames
+#' @importFrom lme4 VarCorr nobars findbars
+NULL
 
 
 #' Test whether one set of terms is a subset of another

@@ -1,8 +1,5 @@
 
 
-utils::globalVariables(c("fac_extrac_fun", "fac_num", "value"))
-
-
 #' Perform and Summarize Exploratory Factor Analysis
 #'
 #' This function conducts exploratory factor analysis (EFA) using a maximum likelihood

@@ -1,8 +1,7 @@
 
-
-utils::globalVariables(c("%+replace%", "element_blank", "element_line",
-                         "element_rect", "element_text", "margin", "theme",
-                         "theme_grey", "unit"))
+#' @importFrom ggplot2 %+replace% theme_grey theme element_blank element_text element_line element_rect margin
+#' @importFrom grid unit
+NULL
 
 
 #' Custom ggplot2 Theme: Jeremy's Theme
@@ -28,7 +27,7 @@ jermeys_theme <- function(base_size = 24, base_family = "") {
       axis.line = ggplot2::element_blank(),
       axis.text.x = ggplot2::element_text(size = base_size * 0.8, color = "black", lineheight = 0.9, family = base_family),
       axis.text.y = ggplot2::element_text(size = base_size * 0.8, color = "black", lineheight = 0.9),
-      axis.ticks = ggplot2::element_line(color = "black", size = 0.2),
+      axis.ticks = ggplot2::element_line(color = "black", linewidth = 0.2),
       axis.title.x = ggplot2::element_text(size = base_size, color = "black", margin = ggplot2::margin(10, 0, 0, 0), family = base_family),
       axis.title.y = ggplot2::element_text(size = base_size, color = "black", angle = 90, margin = ggplot2::margin(0, 10, 0, 0), family = base_family),
       axis.ticks.length = ggplot2::unit(0.3, "lines"),
@@ -41,8 +40,9 @@ jermeys_theme <- function(base_size = 24, base_family = "") {
 
       panel.background = ggplot2::element_rect(fill = "#ffffff", color = NA),
       panel.border = ggplot2::element_rect(fill = NA, color = "black"),
-      panel.grid.major = ggplot2::element_line(color = "#ffffff"),
-      panel.grid.minor = ggplot2::element_line(color = "#ffffff"),
+      panel.grid.major.x = element_line(color = "grey85", linewidth = 0.3),
+      panel.grid.major.y = element_line(color = "grey85", linewidth = 0.3),
+      panel.grid.minor = element_blank(),
       panel.spacing = ggplot2::unit(2, "lines"),
 
 

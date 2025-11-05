@@ -1,8 +1,12 @@
 
-
-utils::globalVariables(c("flextable", "set_caption", "fontsize", "autofit"))
-
-
+#' @importFrom flextable flextable add_header_row merge_at align bold italic
+#' @importFrom flextable border_remove hline hline_top hline_bottom width
+#' @importFrom flextable set_table_properties font fontsize autofit
+#' @importFrom flextable add_footer_lines compose as_paragraph as_i merge_at
+#' @importFrom flextable save_as_image
+#' @importFrom officer fp_border
+#' @importFrom stats anova
+NULL
 
 #' @title Create an APA-Style Likelihood Ratio Test (Model Comparison) Table
 #'

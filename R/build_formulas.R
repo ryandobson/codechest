@@ -1,6 +1,5 @@
-
-utils::globalVariables(c("reformulate"))
-
+#' @importFrom stats reformulate
+NULL
 
 
 #' Build Random Effects Term for Mixed Models

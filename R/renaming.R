@@ -1,5 +1,5 @@
-utils::globalVariables(c("confint", "contrasts"))
-
+#' @importFrom stats confint contrasts
+NULL
 
 #' Rename Rows in Selected Data Frame Columns
 #'
