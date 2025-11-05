@@ -802,7 +802,14 @@ apa_lmer_model <- function(model, data,
                            sig_level = .05,
                            extra_note_info = TRUE,
                            reorder_predictors = TRUE) {
-  # ---- 1. Extract and rename columns ----
+
+  clean_text <- function(x) {
+    x <- gsub("(?<!\n)\n(?!\n)", " ", x, perl = TRUE)
+    x <- gsub(" {2,}", " ", x)
+    trimws(x)
+  }
+
+   # ---- 1. Extract and rename columns ----
   df_out <- rename_lmer(model, data, rename_vec = nice_names)
   df_out <- df_out[, c("var_star", "Estimate", "Std. Error", "df",
                        "t value", "Pr(>|t|)", "2.5 %", "97.5 %")]
@@ -839,11 +846,7 @@ apa_lmer_model <- function(model, data,
 
   #> Ensuring nice printing of names:
   # Step 1: replace single newlines (not double) with a space
-  italics_title_clean <- gsub("(?<!\n)\n(?!\n)", " ", italics_title, perl = TRUE)
-  # Step 2: collapse multiple spaces into one
-  italics_title_clean <- gsub(" {2,}", " ", italics_title_clean)
-  # Step 3: trim leading/trailing whitespace
-  italics_title_clean <- trimws(italics_title_clean)
+  italics_title_clean <- clean_text(italics_title)
 
   # Add table title rows
   ft <- flextable::add_header_row(
@@ -853,11 +856,7 @@ apa_lmer_model <- function(model, data,
   )
 
   # Step 1: replace single newlines (not double) with a space
-  bold_title_clean <- gsub("(?<!\n)\n(?!\n)", " ", bold_title, perl = TRUE)
-  # Step 2: collapse multiple spaces into one
-  bold_title_clean <- gsub(" {2,}", " ", bold_title_clean)
-  # Step 3: trim leading/trailing whitespace
-  bold_title_clean <- trimws(bold_title_clean)
+  bold_title_clean <- cleant_text(bold_title)
 
   ft <- flextable::add_header_row(
     ft,
@@ -934,6 +933,9 @@ apa_lmer_model <- function(model, data,
 
   # ---- 5. Add table note ----
 
+
+  table_note <- clean_text(table_note)
+
   if (extra_note_info == TRUE) {
 
     # --- ICCs ---
@@ -948,52 +950,45 @@ apa_lmer_model <- function(model, data,
     n <- lme4::getME(model, "N")
     ng <- lme4::ngrps(model)
 
-    obs_note <- paste0("\n\nNumber of Observations: ", n)
+    obs_note <- paste0("Number of Observations: ", n)
     gr_note  <- paste0("Number of Groups: ", ng)
     obs_gr_note <- paste0(obs_note, "; ", gr_note)
 
     # --- ICC section ---
-    icc_adj_note   <- paste0("\n\nAdjusted ICC: ", round(model_icc$ICC_adjusted, 2))
+    icc_adj_note   <- paste0("Adjusted ICC: ", round(model_icc$ICC_adjusted, 2))
     icc_unadj_note <- paste0("Unadjusted ICC: ", round(model_icc$ICC_unadjusted, 2))
     icc_notes <- paste0(icc_adj_note, "; ", icc_unadj_note)
 
     # --- R² section ---
-    r2_cond_note <- paste0("\n\nConditional R\u00B2: ", r2_cond)
-    r2_marg_note <- paste0("Marginal R\u00B2: ", r2_marg)
+    r2_cond_note <- paste0("Conditional R2: ", r2_cond)
+    r2_marg_note <- paste0("Marginal R2: ", r2_marg)
     r2_notes <- paste0(r2_cond_note, "; ", r2_marg_note)
 
     # --- Reference note ---
     icc_calc_note <- paste0(
-      "\n\nICC and R\u00B2 calculated using performance::icc() and performance::r2(); ",
-      "see package documentation and Nakagawa et al.(2017) for calculation details."
+      "ICC and R2 calculated using icc() and r2() from the performance package; ",
+      "see package documentation and Nakagawa et al. (2017) for calculation details."
     )
 
     # --- Combine all notes ---
     table_note <- paste0(
-      table_note,
-      obs_gr_note,
-      icc_notes,
-      r2_notes,
+      table_note, "\n",
+      obs_gr_note, "\n",
+      icc_notes, "\n",
+      r2_notes, "\n",
       icc_calc_note
     )
   }
-
-
-  # Step 1: replace single newlines (not double) with a space
-  table_note_clean <- gsub("(?<!\n)\n(?!\n)", " ", table_note, perl = TRUE)
-  # Step 2: collapse multiple spaces into one
-  table_note_clean <- gsub(" {2,}", " ", table_note_clean)
-  # Step 3: trim leading/trailing whitespace
-  table_note_clean <- trimws(table_note_clean)
 
   ft <- flextable::add_footer_lines(ft, values = rep("", ncol(df_out)))
   ft <- flextable::compose(
     ft, i = 1, j = 1, part = "footer",
     value = flextable::as_paragraph(
       flextable::as_i("Note. "),
-      table_note_clean
+      table_note
     )
   )
+
   ft <- flextable::merge_at(ft, i = 1, j = 1:ncol(df_out), part = "footer")
   ft <- flextable::align(ft, align = "left", part = "footer")
   ft <- flextable::fontsize(ft, part = "footer", size = font_size)
@@ -1003,7 +998,6 @@ apa_lmer_model <- function(model, data,
   ft <- flextable::font(ft, fontname = font, part = "all")
   ft <- flextable::fontsize(ft, size = font_size, part = "all")
 
-
   # (optional) Limit the total table width if needed (e.g., 6.5 inches for APA margins)
   ft <- flextable::set_table_properties(ft,
                                         layout = "autofit",
@@ -1012,8 +1006,6 @@ apa_lmer_model <- function(model, data,
 
   return(ft)
 }
-
-
 
 
 #' @title Generate APA-Style Tables for Multiple Linear Mixed-Effects Models
@@ -1129,7 +1121,8 @@ run_apa_lmer_model <- function(model_list,
       }
 
 
-    model_i <- final_model_fed(model_list[[i]][[model_path]])
+    # grab mlm_comparison history object dynamically
+    model_i <- safe_pluck(model_list[[i]], model_path)
 
     if (is.null(data)) { #if I don't supply a df that is used across models,
       #then use the path that must be specified
@@ -1222,6 +1215,16 @@ save_apa_lmer_tables <- function(model_list,
                                  apa_table_path = "apa_table",
                                  prefix = "apa_table",
                                  create_subfolder = TRUE) {
+
+  safe_pluck <- function(x, path) {
+    parts <- strsplit(path, "\\$")[[1]]
+    for (nm in parts) {
+      if (is.null(x)) break
+      x <- x[[nm]]
+    }
+    x
+  }
+
   # ---- Handle folder creation ----
   if (!dir.exists(directory)) dir.create(directory, recursive = TRUE)
 
@@ -1238,10 +1241,10 @@ save_apa_lmer_tables <- function(model_list,
   # ---- Loop through model list ----
   for (i in seq_along(model_list)) {
     model_name <- names(model_list)[i]
-    table <- model_list[[i]][[apa_table_path]]
+    table_i <- safe_pluck(model_list[[i]], apa_table_path)
 
     # Skip if no table found
-    if (is.null(table)) {
+    if (is.null(table_i)) {
       message(sprintf("Skipping %s: no APA table found at '%s'.",
                       model_name, apa_table_path))
       next
@@ -1252,7 +1255,7 @@ save_apa_lmer_tables <- function(model_list,
                            paste0(prefix, "_", model_name, ".png"))
 
     # Save table image
-    flextable::save_as_image(table, path = file_name)
+    flextable::save_as_image(table_i, path = file_name)
   }
 
   message(sprintf("Saved APA tables to: %s", normalizePath(directory)))
