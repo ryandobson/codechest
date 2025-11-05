@@ -17,6 +17,7 @@ run_apa_lmer_model(
   font = "Times New Roman",
   effects_to_bold = NULL,
   sig_level = 0.05,
+  extra_note_info = TRUE,
   reorder_predictors = TRUE
 )
 }
@@ -55,6 +56,9 @@ interaction terms to bold manually in all tables.}
 
 \item{sig_level}{Numeric significance threshold for automatic bolding of
 significant effects. Defaults to \code{0.05}.}
+
+\item{extra_note_info}{Logical; if \code{TRUE} (default), appends ICC, R²,
+and sample size information using}
 
 \item{reorder_predictors}{Logical; if \code{TRUE} (default), predictors are ordered
 by interaction complexity (main effects first, then interactions).}

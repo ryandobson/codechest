@@ -34,6 +34,7 @@ Imports:
     lmerTest,
     emmeans,
     flextable,
-    officer
+    officer,
+    performance
 Depends: 
     R (>= 4.1.0)

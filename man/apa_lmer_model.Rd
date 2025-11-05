@@ -2,7 +2,7 @@
 % Please edit documentation in R/apa_tbl_helpers.R
 \name{apa_lmer_model}
 \alias{apa_lmer_model}
-\title{Create an APA-Style Flextable for a Linear Mixed-Effects Model}
+\title{Create APA-Style Summary Table for lmer Models}
 \usage{
 apa_lmer_model(
   model,
@@ -15,69 +15,92 @@ apa_lmer_model(
   font = "Times New Roman",
   effects_to_bold = NULL,
   sig_level = 0.05,
+  extra_note_info = TRUE,
   reorder_predictors = TRUE
 )
 }
 \arguments{
-\item{model}{A fitted mixed-effects model from \code{lmerTest::summary()}.}
+\item{model}{A fitted \code{lmerMod} or \code{lmerModLmerTest} object.}
 
-\item{data}{The data frame used to fit the model.}
+\item{data}{The data frame used to fit the model (required for renaming and
+internal consistency checks).}
 
-\item{nice_names}{Optional named vector mapping model variable names to
-user-friendly labels (passed to \code{\link[=rename_lmer]{rename_lmer()}}).}
+\item{nice_names}{Optional named vector for renaming predictors to more
+readable labels.}
 
-\item{bold_title}{Character string for the bolded table title row.}
+\item{bold_title}{Character string giving the bolded title line (e.g.,
+\code{"Table"}).}
 
-\item{italics_title}{Character string for the italicized subtitle row.}
+\item{italics_title}{Character string giving the italicized subtitle
+(e.g., \code{"Fixed Effects"}).}
 
-\item{table_note}{Optional character string for a note displayed in the footer.}
+\item{table_note}{Character string appended as a note at the bottom of the
+table. Additional notes (ICC, R², etc.) are added automatically when
+\code{extra_note_info = TRUE}.}
 
-\item{font_size}{Numeric font size applied to all table text. Defaults to \code{10}.}
+\item{font_size}{Numeric scalar; font size (points) for the table text.
+Default is \code{10}.}
 
-\item{font}{Character string specifying the font family. Defaults to \code{"Times New Roman"}.}
+\item{font}{Character scalar giving the font family to use. Default is
+\code{"Times New Roman"}.}
 
 \item{effects_to_bold}{Optional character vector of predictor names or
-interaction terms to bold manually (e.g., \code{"Zp_sexattract:Zprog_ww"}).}
+interaction terms to bold manually (e.g., \code{c("X1", "X1*X2")}).}
 
-\item{sig_level}{Numeric significance threshold for bolding rows automatically.
-Defaults to \code{.05}.}
+\item{sig_level}{Numeric scalar giving the significance threshold below
+which effects are automatically bolded. Default is \code{.05}.}
 
-\item{reorder_predictors}{Logical; if \code{TRUE} (default), predictors are ordered
-by interaction complexity (main effects first, then interactions).}
+\item{extra_note_info}{Logical; if \code{TRUE} (default), appends ICC, R²,
+and sample size information using
+\code{\link[performance:icc]{performance::icc()}} and
+\code{\link[performance:r2]{performance::r2()}}.}
+
+\item{reorder_predictors}{Logical; if \code{TRUE} (default), sorts predictors by
+interaction order (main effects first, then two-way, then higher-order).}
 }
 \value{
-A flextable object (see \code{\link[flextable:flextable]{flextable::flextable()}} for table export options).
-The returned table includes APA-style titles, alignment, and significance formatting.
-
-#' @details
-This function is designed to take an \code{lmerTest} model object and produce a
-polished APA-formatted table. It:
-\itemize{
-\item extracts and renames key columns from \code{lmerTest::summary()},
-\item formats coefficients and p-values to APA standards,
-\item allows reordering of predictors (main → two-way → higher-order),
-\item bolds significant effects or specified terms,
-\item and applies a consistent typographic style using \strong{flextable}.
-}
+A formatted \code{\link[flextable:flextable]{flextable::flextable}} object representing an APA-style model
+summary table.
 }
 \description{
-Formats the output of a fitted \code{lmerTest::summary()} model into an APA-style
-\strong{flextable} suitable for publication. The table includes coefficient
-estimates, confidence intervals, t-values, degrees of freedom, and p-values,
-with options for bolding significant effects and customizing font and layout.
-
-The function supports both automatic significance highlighting (\code{sig_level})
-and manual specification of terms to bold via \code{effects_to_bold}.
+Generates a fully formatted APA-style table of fixed-effect estimates from a
+linear mixed-effects model (\code{lmerMod} or \code{lmerModLmerTest}). The table is
+output as a \href{https://davidgohel.github.io/flextable/}{\code{flextable}} object,
+ready for inclusion in Word, Quarto, or PDF documents. It optionally adds
+model diagnostics (ICC, R², sample size) in the table footer and supports
+custom variable labels, predictor ordering, and selective bolding of
+significant or specified effects.
+}
+\details{
+Internally, the function:
+\enumerate{
+\item Extracts model coefficients using a helper (\code{rename_lmer()}).
+\item Formats estimates, \emph{t}-values, \emph{p}-values, and confidence intervals
+to APA precision.
+\item Creates a \code{\link[flextable:flextable]{flextable::flextable()}} object with hierarchical
+header rows (bold and italic titles).
+\item Optionally bolds statistically significant predictors and/or user-specified
+effects.
+\item Optionally appends notes for number of observations, number of groups,
+Intraclass Correlation Coefficients (adjusted / unadjusted), and
+model R² (conditional / marginal) computed via the
+\href{https://easystats.github.io/performance/}{\code{performance}} package.
+}
 }
 \examples{
 \dontrun{
 library(lme4)
-m <- lmerTest::lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
-apa_lmer_model(m, data = sleepstudy, italics_title = "Reaction ~ Days")
+library(performance)
+m <- lmer(Reaction ~ Days + (Days | Subject), sleepstudy)
+apa_lmer_model(m, data = sleepstudy,
+               bold_title = "Table 1",
+               italics_title = "Fixed Effects",
+               table_note = "All coefficients are unstandardized.",
+               extra_note_info = TRUE)
 }
 
 }
 \seealso{
-\code{\link[=rename_lmer]{rename_lmer()}}, \code{\link[flextable:flextable]{flextable::flextable()}}, \code{lmerTest::summary()},
-\code{\link[flextable:save_as_docx]{flextable::save_as_docx()}}, \code{\link[flextable:save_as_image]{flextable::save_as_image()}}
+\code{\link[performance:icc]{performance::icc()}}, \code{\link[performance:r2]{performance::r2()}},
+\code{\link[flextable:flextable]{flextable::flextable()}}, \link[lme4:lmer]{lme4::lmer}
 }

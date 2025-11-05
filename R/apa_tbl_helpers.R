@@ -711,58 +711,85 @@ save_apa_mlm_reports <- function(model_list,
 }
 
 
-#' @title Create an APA-Style Flextable for a Linear Mixed-Effects Model
+#' Create APA-Style Summary Table for lmer Models
 #'
-#' @description
-#' Formats the output of a fitted `lmerTest::summary()` model into an APA-style
-#' **flextable** suitable for publication. The table includes coefficient
-#' estimates, confidence intervals, t-values, degrees of freedom, and p-values,
-#' with options for bolding significant effects and customizing font and layout.
+#' Generates a fully formatted APA-style table of fixed-effect estimates from a
+#' linear mixed-effects model (`lmerMod` or `lmerModLmerTest`). The table is
+#' output as a [`flextable`](https://davidgohel.github.io/flextable/) object,
+#' ready for inclusion in Word, Quarto, or PDF documents. It optionally adds
+#' model diagnostics (ICC, R², sample size) in the table footer and supports
+#' custom variable labels, predictor ordering, and selective bolding of
+#' significant or specified effects.
 #'
-
-#' The function supports both automatic significance highlighting (`sig_level`)
-#' and manual specification of terms to bold via `effects_to_bold`.
-#'
-#' @param model A fitted mixed-effects model from `lmerTest::summary()`.
-#' @param data The data frame used to fit the model.
-#' @param nice_names Optional named vector mapping model variable names to
-#'   user-friendly labels (passed to [rename_lmer()]).
-#' @param bold_title Character string for the bolded table title row.
-#' @param italics_title Character string for the italicized subtitle row.
-#' @param table_note Optional character string for a note displayed in the footer.
-#' @param font_size Numeric font size applied to all table text. Defaults to `10`.
-#' @param font Character string specifying the font family. Defaults to `"Times New Roman"`.
+#' @param model A fitted `lmerMod` or `lmerModLmerTest` object.
+#' @param data The data frame used to fit the model (required for renaming and
+#'   internal consistency checks).
+#' @param nice_names Optional named vector for renaming predictors to more
+#'   readable labels.
+#' @param bold_title Character string giving the bolded title line (e.g.,
+#'   `"Table"`).
+#' @param italics_title Character string giving the italicized subtitle
+#'   (e.g., `"Fixed Effects"`).
+#' @param table_note Character string appended as a note at the bottom of the
+#'   table. Additional notes (ICC, R², etc.) are added automatically when
+#'   `extra_note_info = TRUE`.
+#' @param font_size Numeric scalar; font size (points) for the table text.
+#'   Default is `10`.
+#' @param font Character scalar giving the font family to use. Default is
+#'   `"Times New Roman"`.
 #' @param effects_to_bold Optional character vector of predictor names or
-#'   interaction terms to bold manually (e.g., `"Zp_sexattract:Zprog_ww"`).
-#' @param sig_level Numeric significance threshold for bolding rows automatically.
-#'   Defaults to `.05`.
-#' @param reorder_predictors Logical; if `TRUE` (default), predictors are ordered
-#'   by interaction complexity (main effects first, then interactions).
+#'   interaction terms to bold manually (e.g., `c("X1", "X1*X2")`).
+#' @param sig_level Numeric scalar giving the significance threshold below
+#'   which effects are automatically bolded. Default is `.05`.
+#' @param extra_note_info Logical; if `TRUE` (default), appends ICC, R²,
+#'   and sample size information using
+#'   [`performance::icc()`][performance::icc] and
+#'   [`performance::r2()`][performance::r2].
+#' @param reorder_predictors Logical; if `TRUE` (default), sorts predictors by
+#'   interaction order (main effects first, then two-way, then higher-order).
 #'
-#' @return A flextable object (see [flextable::flextable()] for table export options).
-#' The returned table includes APA-style titles, alignment, and significance formatting.
-#'
-#'#' @details
-#' This function is designed to take an `lmerTest` model object and produce a
-#' polished APA-formatted table. It:
-#' \itemize{
-#'   \item extracts and renames key columns from `lmerTest::summary()`,
-#'   \item formats coefficients and p-values to APA standards,
-#'   \item allows reordering of predictors (main → two-way → higher-order),
-#'   \item bolds significant effects or specified terms,
-#'   \item and applies a consistent typographic style using **flextable**.
+#' @details
+#' Internally, the function:
+#' \enumerate{
+#'   \item Extracts model coefficients using a helper (`rename_lmer()`).
+#'   \item Formats estimates, *t*-values, *p*-values, and confidence intervals
+#'     to APA precision.
+#'   \item Creates a [`flextable::flextable()`] object with hierarchical
+#'     header rows (bold and italic titles).
+#'   \item Optionally bolds statistically significant predictors and/or user-specified
+#'     effects.
+#'   \item Optionally appends notes for number of observations, number of groups,
+#'     Intraclass Correlation Coefficients (adjusted / unadjusted), and
+#'     model R² (conditional / marginal) computed via the
+#'     [`performance`](https://easystats.github.io/performance/) package.
 #' }
+#'
+#' @return A formatted [`flextable`] object representing an APA-style model
+#' summary table.
+#'
 #' @examples
 #' \dontrun{
 #' library(lme4)
-#' m <- lmerTest::lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
-#' apa_lmer_model(m, data = sleepstudy, italics_title = "Reaction ~ Days")
+#' library(performance)
+#' m <- lmer(Reaction ~ Days + (Days | Subject), sleepstudy)
+#' apa_lmer_model(m, data = sleepstudy,
+#'                bold_title = "Table 1",
+#'                italics_title = "Fixed Effects",
+#'                table_note = "All coefficients are unstandardized.",
+#'                extra_note_info = TRUE)
 #' }
 #'
-#' @seealso
-#' [rename_lmer()], [flextable::flextable()], `lmerTest::summary()`,
-#' [flextable::save_as_docx()], [flextable::save_as_image()]
+#' @seealso [performance::icc()], [performance::r2()],
+#'   [flextable::flextable()], [lme4::lmer]
 #'
+#' @importFrom flextable flextable add_header_row merge_at align bold italic
+#'   border_remove hline hline_bottom autofit set_table_properties
+#'   font fontsize add_footer_lines compose as_paragraph as_i width
+#' @importFrom officer fp_border
+#' @importFrom performance icc r2
+#' @importFrom lme4 getME ngrps
+#' @importFrom stats nobs
+#' @importFrom utils capture.output
 #' @export
 apa_lmer_model <- function(model, data,
                            nice_names = NULL,
@@ -773,6 +800,7 @@ apa_lmer_model <- function(model, data,
                            font = "Times New Roman",
                            effects_to_bold = NULL,
                            sig_level = .05,
+                           extra_note_info = TRUE,
                            reorder_predictors = TRUE) {
   # ---- 1. Extract and rename columns ----
   df_out <- rename_lmer(model, data, rename_vec = nice_names)
@@ -905,6 +933,52 @@ apa_lmer_model <- function(model, data,
   ft <- flextable::autofit(ft)
 
   # ---- 5. Add table note ----
+
+  if (extra_note_info == TRUE) {
+
+    # --- ICCs ---
+    model_icc <- performance::icc(model)
+
+    # --- R2 values ---
+    model_r2 <- performance::r2(model)
+    r2_cond <- round(model_r2$R2_conditional, 2)
+    r2_marg <- round(model_r2$R2_marginal, 2)
+
+    # --- Observation and group info ---
+    n <- lme4::getME(model, "N")
+    ng <- lme4::ngrps(model)
+
+    obs_note <- paste0("\n\nNumber of Observations: ", n)
+    gr_note  <- paste0("Number of Groups: ", ng)
+    obs_gr_note <- paste0(obs_note, "; ", gr_note)
+
+    # --- ICC section ---
+    icc_adj_note   <- paste0("\n\nAdjusted ICC: ", round(model_icc$ICC_adjusted, 2))
+    icc_unadj_note <- paste0("Unadjusted ICC: ", round(model_icc$ICC_unadjusted, 2))
+    icc_notes <- paste0(icc_adj_note, "; ", icc_unadj_note)
+
+    # --- R² section ---
+    r2_cond_note <- paste0("\n\nConditional R\u00B2: ", r2_cond)
+    r2_marg_note <- paste0("Marginal R\u00B2: ", r2_marg)
+    r2_notes <- paste0(r2_cond_note, "; ", r2_marg_note)
+
+    # --- Reference note ---
+    icc_calc_note <- paste0(
+      "\n\nICC and R\u00B2 calculated using performance::icc() and performance::r2(); ",
+      "see package documentation and Nakagawa et al.(2017) for calculation details."
+    )
+
+    # --- Combine all notes ---
+    table_note <- paste0(
+      table_note,
+      obs_gr_note,
+      icc_notes,
+      r2_notes,
+      icc_calc_note
+    )
+  }
+
+
   # Step 1: replace single newlines (not double) with a space
   table_note_clean <- gsub("(?<!\n)\n(?!\n)", " ", table_note, perl = TRUE)
   # Step 2: collapse multiple spaces into one
@@ -929,20 +1003,6 @@ apa_lmer_model <- function(model, data,
   ft <- flextable::font(ft, fontname = font, part = "all")
   ft <- flextable::fontsize(ft, size = font_size, part = "all")
 
-  #Cap Predictor column width at 3.5 inches, others auto-adjust
-  # current_widths <- flextable::dim_pretty(ft)$widths
-  # pred_col <- which(names(df_out) == "Predictor")
-  #
-  # if (current_widths[pred_col] > 3.5) {
-  #   ft <- flextable::width(ft, j = "Predictor", width = 3.5)
-  # }
-
-  # 3) Turn on wrapping (applies to table; numerics won't wrap)
-  #ft <- flextable::set_table_properties(ft, word_wrap = TRUE)
-
-  # (Optional) Set compact widths for numeric cols to discourage wrapping
-  # ft <- flextable::width(ft, j = c("Predictor", "Estimate","CI","t","df","p"),
-  #                        width = c(0.9, 1.3, 0.9, 0.9, 0.9))
 
   # (optional) Limit the total table width if needed (e.g., 6.5 inches for APA margins)
   ft <- flextable::set_table_properties(ft,
@@ -1001,6 +1061,8 @@ apa_lmer_model <- function(model, data,
 #'   significant effects. Defaults to `0.05`.
 #' @param reorder_predictors Logical; if `TRUE` (default), predictors are ordered
 #'   by interaction complexity (main effects first, then interactions).
+#' @param extra_note_info Logical; if `TRUE` (default), appends ICC, R²,
+#'   and sample size information using
 #'
 #' @return
 #' A list identical in structure to `model_list`, but with an additional
@@ -1039,6 +1101,7 @@ run_apa_lmer_model <- function(model_list,
                                font = "Times New Roman",
                                effects_to_bold = NULL,
                                sig_level = .05,
+                               extra_note_info = TRUE,
                                reorder_predictors = TRUE
 ) {
 
@@ -1085,6 +1148,7 @@ run_apa_lmer_model <- function(model_list,
       font_size = font_size,
       effects_to_bold = effects_to_bold,
       sig_level = sig_level,
+      extra_note_info = extra_note_info,
       reorder_predictors = reorder_predictors
     )
 
