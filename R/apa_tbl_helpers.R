@@ -856,7 +856,7 @@ apa_lmer_model <- function(model, data,
   )
 
   # Step 1: replace single newlines (not double) with a space
-  bold_title_clean <- cleant_text(bold_title)
+  bold_title_clean <- clean_text(bold_title)
 
   ft <- flextable::add_header_row(
     ft,
