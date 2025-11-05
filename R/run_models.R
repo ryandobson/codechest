@@ -49,7 +49,7 @@
 #' }
 #'
 #' @importFrom stats lm
-#' @importFrom lme4 lmer
+#' @importFrom lmerTest lmer
 #' @export
 
 run_models <- function(model_list) {

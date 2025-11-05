@@ -1,5 +1,5 @@
 
-utils::globalVariables(c(".data", "all_of", "filter", "item_name", "pull", "select"))
+utils::globalVariables(c("item_name"))
 
 
 #' Extract and Format Variance Accounted for in Factor Analysis Model

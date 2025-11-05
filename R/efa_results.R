@@ -1,8 +1,7 @@
 
 
-utils::globalVariables(c("as_tibble", "fa", "fac_extrac_fun", "kable_paper",
-                         "left_join", "mutate", "rename", "rownames_to_column",
-                         "kbl"))
+utils::globalVariables(c("fac_extrac_fun", "fac_num", "value"))
+
 
 #' Perform and Summarize Exploratory Factor Analysis
 #'
@@ -32,9 +31,6 @@ utils::globalVariables(c("as_tibble", "fa", "fac_extrac_fun", "kable_paper",
 #' # Example usage:
 #' # efa_results(my_data, 3)
 #'
-#' @import dplyr
-#' @import tibble
-#' @import kableExtra
 #' @importFrom psych fa
 #' @export
 
@@ -189,8 +185,6 @@ if (n_factors == 1) {
   return(final) # Returns the efa model to the global environment
 }
 
-
-utils::globalVariables(c("fac_num", "value"))
 
 
 #' Factor Extraction Results

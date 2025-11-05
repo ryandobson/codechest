@@ -4,7 +4,7 @@
 \alias{run_multiple_invariance}
 \title{Run Multiple Measurement Invariance Tests}
 \usage{
-run_multiple_invariance(models, data, group_vars)
+run_multiple_invariance(models, data, group_vars, verbose = TRUE)
 }
 \arguments{
 \item{models}{A named list of models to test, where the names represent the model identifiers,
@@ -13,6 +13,8 @@ and the values are the model strings in \code{lavaan} syntax.}
 \item{data}{A data frame containing the observed variables used in the models.}
 
 \item{group_vars}{A character vector specifying the grouping variables to test invariance against.}
+
+\item{verbose}{Whether or not to print}
 }
 \value{
 A list where each element corresponds to a specific model and grouping variable combination.

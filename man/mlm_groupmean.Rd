@@ -2,31 +2,89 @@
 % Please edit documentation in R/mlm_centering.R
 \name{mlm_groupmean}
 \alias{mlm_groupmean}
-\title{Group-Mean Centering for Multi-Level Modeling}
+\title{Group-Mean Centering for Multiple Variables (Base R)}
 \usage{
-mlm_groupmean(df, group, variable)
+mlm_groupmean(
+  df,
+  variables,
+  group,
+  within_affix = "WG",
+  between_affix = "BG",
+  affix_type = c("prefix", "suffix"),
+  include_z = TRUE
+)
 }
 \arguments{
-\item{df}{A data frame in long format, containing the data to be processed.}
+\item{df}{A data frame in long format containing the variables to process.}
 
-\item{group}{The grouping variable (quoted or unquoted) used to define groups.}
+\item{variables}{A character vector of variable names to be group-mean centered.}
 
-\item{variable}{The target variable (quoted or unquoted) to calculate group means and deviations.}
+\item{group}{A string giving the name of the grouping variable that defines clusters or groups.}
+
+\item{within_affix}{A string used to label within-group variables (default = \code{"WG"}).}
+
+\item{between_affix}{A string used to label between-group variables (default = \code{"BG"}).}
+
+\item{affix_type}{A string indicating whether to add affixes as \code{"prefix"} or \code{"suffix"}.
+Defaults to \code{"prefix"}. If another value is supplied, the function will raise an error.}
+
+\item{include_z}{Logical; whether to include standardized (z-scored) versions
+of each between- and within-group variable. Defaults to \code{TRUE}.}
 }
 \value{
-A data frame with additional columns:
+The input data frame with new variables added for each input variable:
 \itemize{
-\item \verb{BF_<variable>}: Between-group mean of the target variable.
-\item \verb{ZBF_<variable>}: Standardized between-group mean of the target variable.
-\item \verb{WF_<variable>}: Within-group deviation of the target variable.
-\item \verb{ZWF_<variable>}: Standardized within-group deviation of the target variable.
+\item Between-group mean: \code{"BG_<variable>"} or \code{"<variable>_BG"}
+\item Within-group deviation: \code{"WG_<variable>"} or \code{"<variable>_WG"}
+\item (optional) Standardized versions: \code{"ZBG_<variable>"}, \code{"ZWG_<variable>"}, etc.
 }
+Each new variable receives a descriptive \code{"label"} attribute for interpretability.
 }
 \description{
-This function performs group-mean centering for multi-level modeling analyses.
-It calculates the between-group mean, within-group deviation, and their
-standardized versions for a specified variable within a given grouping structure.
-The input data frame must be in long format for accurate calculations.
-This function is particularly useful for creating multi-level modeling (MLM)
-predictors and can be applied to multiple variables using a loop or \code{purrr} workflow.
+Performs group-mean centering for one or more variables in a data frame.
+For each variable, this function computes the between-group mean and
+within-group deviation relative to a specified grouping variable, and
+optionally creates standardized (z-scored) versions of these quantities.
+}
+\details{
+Each derived variable automatically receives an informative label,
+even if the original variable had none. If a \code{"label"} attribute exists,
+it is included in the new label; otherwise, the variable name is used.
+
+For each variable in \code{variables}, the function:
+\enumerate{
+\item Computes the between-group mean (average of the variable within each group).
+\item Computes the within-group deviation (individual score minus its group mean).
+\item Optionally standardizes both using \code{scale()}.
+\item Creates or updates \code{"label"} attributes for all derived variables:
+\itemize{
+\item \emph{Between-group mean:} \code{"Between-group mean of <group>: <label or variable name>"}
+\item \emph{Within-group deviation:} \code{"Within-group deviation of <group>: <label or variable name>"}
+\item \emph{Z-scored versions:} \code{"Z-scored between-group mean of <group>: <label or variable name>"}, etc.
+}
+}
+}
+\examples{
+df <- data.frame(
+  id = rep(1:3, each = 3),
+  score = c(4, 5, 6, 3, 2, 1, 5, 7, 6)
+)
+
+attr(df$score, "label") <- "Self-rated performance"
+
+df2 <- mlm_groupmean(df,
+                     variables = "score",
+                     group = "id",
+                     affix_type = "prefix",
+                     include_z = TRUE)
+
+attr(df2$BG_score, "label")
+#> "Between-group mean of id: Self-rated performance"
+
+attr(df2$WG_score, "label")
+#> "Within-group deviation of id: Self-rated performance"
+
+}
+\seealso{
+\code{\link{ave}}, \code{\link{scale}}
 }

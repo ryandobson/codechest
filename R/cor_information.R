@@ -1,6 +1,3 @@
-utils::globalVariables(c("everything", "variables", "stats", "cor", "setNames"))
-
-
 
 #' Generate a Nice-Looking Correlation Matrix with Custom Bolded Values
 #'

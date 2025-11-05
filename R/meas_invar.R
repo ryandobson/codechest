@@ -1,6 +1,4 @@
 
-utils::globalVariables(c("anova", "cfa"))
-
 
 #' Test Measurement Invariance Across Groups
 #'
@@ -41,7 +39,8 @@ utils::globalVariables(c("anova", "cfa"))
 #' The `anova` table compares the models to determine if each level of invariance
 #' is supported. A non-significant difference in model fit suggests invariance holds.
 #'
-#' @importFrom lavaan cfa anova
+#' @importFrom lavaan cfa
+#' @importFrom stats anova
 #' @export
 
 test_measurement_invariance <- function(model, data, group) {
@@ -81,6 +80,8 @@ test_measurement_invariance <- function(model, data, group) {
 #'   and the values are the model strings in `lavaan` syntax.
 #' @param data A data frame containing the observed variables used in the models.
 #' @param group_vars A character vector specifying the grouping variables to test invariance against.
+#' @param verbose Whether or not to print output to track the progress of the invariance
+#' testing for each grouping variable. Default = 'TRUE'.
 #'
 #' @return A list where each element corresponds to a specific model and grouping variable combination.
 #'   Each element contains the results returned by `test_measurement_invariance`, including:
@@ -103,10 +104,12 @@ test_measurement_invariance <- function(model, data, group) {
 #'
 
 #' @seealso \code{\link{test_measurement_invariance}}
-#' @importFrom lavaan cfa anova
+#' @importFrom lavaan cfa
+#' @importFrom stats anova
 #' @export
 
-run_multiple_invariance <- function(models, data, group_vars) {
+run_multiple_invariance <- function(models, data, group_vars, verbose = TRUE) {
+
   results <- list()
 
   for (group_var in group_vars) {
@@ -117,13 +120,15 @@ run_multiple_invariance <- function(models, data, group_vars) {
       # Store results in a structured way
       results[[paste0(model_name, "_", group_var)]] <- mi_result
 
+    if(verbose == TRUE) {
       # Print basic output for monitoring progress
       cat("\nModel:", model_name, "Group:", group_var, "\n")
       print(mi_result$comparisons)
     }
-  }
+    }#end of inner for loop
+  }#end of outer for loop
 
-  #return(results)
+  return(results)
 }
 
 
