@@ -90,15 +90,15 @@ mlm_groupmean <- function(df, variables, group,
 
     # Construct variable names
     if (affix_type == "prefix") {
-      bg_name  <- paste0(between_affix, "_", variable_i)
-      wg_name  <- paste0(within_affix, "_", variable_i)
-      zbg_name <- paste0("Z", between_affix, "_", variable_i)
-      zwg_name <- paste0("Z", within_affix, "_", variable_i)
+      bg_name  <- paste0(between_affix, variable_i)
+      wg_name  <- paste0(within_affix, variable_i)
+      zbg_name <- paste0("Z", between_affix,  variable_i)
+      zwg_name <- paste0("Z", within_affix, variable_i)
     } else {
-      bg_name  <- paste0(variable_i, "_", between_affix)
-      wg_name  <- paste0(variable_i, "_", within_affix)
-      zbg_name <- paste0(variable_i, "_Z", between_affix)
-      zwg_name <- paste0(variable_i, "_Z", within_affix)
+      bg_name  <- paste0(variable_i, between_affix)
+      wg_name  <- paste0(variable_i, within_affix)
+      zbg_name <- paste0("Z", variable_i, between_affix)
+      zwg_name <- paste0("Z", variable_i, within_affix)
     }
 
     df[[bg_name]] <- ave(df[[variable_i]], df[[group]], FUN = function(xi) mean(xi, na.rm = TRUE))
