@@ -366,11 +366,14 @@ create_nice_names <- function(model_effects,
   #> new_var3 = NA
 
   #split up the interaction terms (results in a list)
-  s <- strsplit(me$variable, ":", fixed = TRUE)
+  st <- strsplit(me$variable, ":", fixed = TRUE)
   #get the max length of a list
-  k <- max(lengths(s))
+  k <- max(lengths(st))
   #bring parts into a dataframe
-  parts <- t(vapply(s, function(x) { length(x) <- k; x }, character(k)))
+  parts <- do.call(rbind, lapply(st, function(x) {
+    length(x) <- k
+    x
+  }))
   #rename variables by "new_var" and the number
   colnames(parts) <- paste0("new_var", seq_len(k))
   #bind the parts into the original effects data frame
