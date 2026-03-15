@@ -201,9 +201,6 @@ apa_anova_comparison <- function(anova_table,
 
 
 
-
-
-
 #' @title Create an APA-Style Summary Table for Multilevel Model Comparisons
 #'
 #' @description

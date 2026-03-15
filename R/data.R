@@ -18,3 +18,20 @@
 #' summary(ryanhonorthesis)
 "ryanhonorthesis"
 
+
+#' Five Love Languages Dataset
+#'
+#' A cleaned dataset derived from my master's thesis examining the
+#' psychometric structure of the Five Love Languages.
+#'
+#' The dataset includes demographic variables, relationship variables,
+#' and items measuring both the *receiving* and *expressing* dimensions
+#' of the five love languages.
+#'
+#' @format A data frame with 950 rows and 109 variables.
+#' @source Master's thesis dataset collected in summer/fall 2024 and
+#' cleaned for inclusion in the codechest package.
+#' @examples
+#' data(fivelovelanguages)
+#' head(fivelovelanguages)
+"fivelovelanguages"
