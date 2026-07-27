@@ -8,12 +8,14 @@ pub_cors_by(
   data,
   cor_vars,
   group_var,
-  groups,
+  groups = NULL,
   rename_vec = NULL,
   rename_cols = TRUE,
   diag_from = "one",
   cor_use = "pairwise",
-  rnd = 2
+  diff_cor = TRUE,
+  rnd = 2,
+  n_top_diff = 10
 )
 }
 \arguments{
@@ -26,7 +28,8 @@ correlation matrices.}
 string.}
 
 \item{groups}{Length-2 character vector giving the two group values
-(order matters: \code{groups[1]} → upper triangle, \code{groups[2]} → lower).}
+(order matters: \code{groups[1]} → upper triangle, \code{groups[2]} → lower).
+If \code{NULL} (default), the two levels are taken from \code{levels(data[[group_var]])}.}
 
 \item{rename_vec}{Optional named character vector for renaming variables
 (robust to old→new vs. new→old mapping); see \code{\link[=rename_rnd_cor]{rename_rnd_cor()}}.}
@@ -40,11 +43,21 @@ string.}
 \item{cor_use}{Passed to \code{\link[stats:cor]{stats::cor()}} \code{use=} argument (e.g.,
 \code{"pairwise"} or \code{"complete"}).}
 
+\item{diff_cor}{Logical; if \code{TRUE} (default), also compute a
+\code{groups[1] - groups[2]} difference matrix and a table of the largest
+absolute differences, attached as the \code{"group_diff"} attribute.}
+
 \item{rnd}{Integer number of decimals to round to before combining.}
+
+\item{n_top_diff}{Integer; number of largest-magnitude differences to keep
+in the \code{top_diff} table when \code{diff_cor = TRUE}. Default 10.}
 }
 \value{
 A matrix of class \code{"pub_cors_mat"} with attribute
-\code{note = "Upper triangle = <g1>, Lower triangle = <g2>"}.
+\code{note = "Upper triangle = <g1>, Lower triangle = <g2>"}, and (when
+\code{diff_cor = TRUE}) a \code{"group_diff"} attribute. Use
+\code{\link[=print.pub_cors_mat]{print.pub_cors_mat()}} (the default print method for this class) to view
+the note and difference matrix alongside the combined correlation matrix.
 }
 \description{
 Splits a data frame by a grouping variable, computes correlations on a set of
@@ -60,6 +73,10 @@ consistent naming prior to \code{\link[=combine_corr_triangles]{combine_corr_tri
 
 The returned object has class \code{"pub_cors_mat"} and a \code{"note"}
 attribute describing which group appears in the upper and lower triangles.
+When \code{diff_cor = TRUE}, a \code{"group_diff"} attribute is also attached,
+containing a \code{contrast} label, the raw \code{diff} matrix
+(\code{groups[1] - groups[2]}), and a \code{top_diff} data frame of the
+\code{n_top_diff} largest absolute differences (see \code{\link[=top_cor_diff]{top_cor_diff()}}).
 }
 \examples{
 # Toy example
@@ -79,5 +96,6 @@ pub_cors_by(
 
 }
 \seealso{
-\code{\link[stats:cor]{stats::cor()}}, \code{\link[=rename_rnd_cor]{rename_rnd_cor()}}, \code{\link[=combine_corr_triangles]{combine_corr_triangles()}}
+\code{\link[stats:cor]{stats::cor()}}, \code{\link[=rename_rnd_cor]{rename_rnd_cor()}}, \code{\link[=combine_corr_triangles]{combine_corr_triangles()}},
+\code{\link[=top_cor_diff]{top_cor_diff()}}, \code{\link[=print.pub_cors_mat]{print.pub_cors_mat()}}
 }

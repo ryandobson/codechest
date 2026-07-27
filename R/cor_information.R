@@ -372,6 +372,7 @@ combine_corr_triangles <- function(upper_mat, lower_mat,
 #'   string.
 #' @param groups Length-2 character vector giving the two group values
 #'   (order matters: \code{groups[1]} → upper triangle, \code{groups[2]} → lower).
+#'   If \code{NULL} (default), the two levels are taken from \code{levels(data[[group_var]])}.
 #' @param rename_vec Optional named character vector for renaming variables
 #'   (robust to old→new vs. new→old mapping); see [rename_rnd_cor()].
 #' @param rename_cols Logical; if \code{TRUE}, row names become
@@ -380,7 +381,12 @@ combine_corr_triangles <- function(upper_mat, lower_mat,
 #'   [combine_corr_triangles()] (default \code{"one"}).
 #' @param cor_use Passed to [stats::cor()] \code{use=} argument (e.g.,
 #'   \code{"pairwise"} or \code{"complete"}).
+#' @param diff_cor Logical; if \code{TRUE} (default), also compute a
+#'   \code{groups[1] - groups[2]} difference matrix and a table of the largest
+#'   absolute differences, attached as the \code{"group_diff"} attribute.
 #' @param rnd Integer number of decimals to round to before combining.
+#' @param n_top_diff Integer; number of largest-magnitude differences to keep
+#'   in the \code{top_diff} table when \code{diff_cor = TRUE}. Default 10.
 #'
 #' @details
 #' Internally calls \code{compute_split_cors(data, cor_vars, group_var, groups,
@@ -390,9 +396,16 @@ combine_corr_triangles <- function(upper_mat, lower_mat,
 #'
 #' The returned object has class \code{"pub_cors_mat"} and a \code{"note"}
 #' attribute describing which group appears in the upper and lower triangles.
+#' When \code{diff_cor = TRUE}, a \code{"group_diff"} attribute is also attached,
+#' containing a \code{contrast} label, the raw \code{diff} matrix
+#' (\code{groups[1] - groups[2]}), and a \code{top_diff} data frame of the
+#' \code{n_top_diff} largest absolute differences (see [top_cor_diff()]).
 #'
 #' @return A matrix of class \code{"pub_cors_mat"} with attribute
-#'   \code{note = "Upper triangle = <g1>, Lower triangle = <g2>"}.
+#'   \code{note = "Upper triangle = <g1>, Lower triangle = <g2>"}, and (when
+#'   \code{diff_cor = TRUE}) a \code{"group_diff"} attribute. Use
+#'   [print.pub_cors_mat()] (the default print method for this class) to view
+#'   the note and difference matrix alongside the combined correlation matrix.
 #'
 #' @examples
 #' # Toy example
@@ -410,22 +423,29 @@ combine_corr_triangles <- function(upper_mat, lower_mat,
 #'   rnd = 2
 #' )
 #'
-#' @seealso [stats::cor()], [rename_rnd_cor()], [combine_corr_triangles()]
+#' @seealso [stats::cor()], [rename_rnd_cor()], [combine_corr_triangles()],
+#'   [top_cor_diff()], [print.pub_cors_mat()]
 #' @export
 
 
 pub_cors_by <- function(data,
                         cor_vars,
                         group_var,
-                        groups,
+                        groups = NULL,
                         rename_vec = NULL,
                         rename_cols = TRUE,
                         diag_from = "one",
                         cor_use = "pairwise",
-                        rnd = 2) {
+                        diff_cor = TRUE,
+                        rnd = 2,
+                        n_top_diff = 10) {
   #> base r version of allowing bare name or string as input for group_var
   expr <- substitute(group_var)
   gv <- if (is.symbol(expr)) deparse(expr) else as.character(group_var)[1L]
+
+  #> if groups isn't supplied, fall back to the levels of the grouping variable
+  if (is.null(groups)) groups <- levels(data[[gv]])
+  if (length(groups) > 2) stop("Grouping variable had more than 2 levels.")
 
   cor_mats <- compute_split_cors(data, cor_vars, as.name(gv), groups, cor_use = cor_use)
 
@@ -448,9 +468,136 @@ pub_cors_by <- function(data,
                               ", Lower triangle = ", groups[2])
   class(out) <- c("pub_cors_mat", class(out))  # add custom class
 
+  #> If I want the difference matrix, add it onto "out" as an attribute
+  if (diff_cor) {
+    diff <- cor_mats[[1]] - cor_mats[[2]]
+    top_diffs <- top_cor_diff(cor_mats[[1]], cor_mats[[2]], groups = groups, n = n_top_diff)
+    diff <- rename_rnd_cor(diff, rename_vec = rename_vec, rename_cols = rename_cols, rnd = rnd)
+    attr(out, "group_diff") <- list(
+      contrast = paste0("Group differences: ", groups[1], " - ", groups[2]),
+      diff = diff,
+      top_diff = top_diffs
+    )
+  }
+
 
   return(out)
 
+}
+
+#' Find the largest correlation differences between two matrices
+#'
+#' Compares two correlation matrices of identical dimension and returns the
+#' \code{n} off-diagonal pairs with the largest absolute difference.
+#'
+#' @param cor1,cor2 Square numeric correlation matrices with identical
+#'   dimensions (and, ideally, dimnames in the same order).
+#' @param groups A length-2 character vector used to label the two correlation
+#'   columns in the output (e.g., \code{c("Study 1", "Study 2")}).
+#' @param n Integer number of top differences to return. Default 10.
+#' @param rnd Integer number of decimals to round numeric columns to. Default 2.
+#'
+#' @return A data frame with columns \code{var1}, \code{var2}, one column per
+#'   entry in \code{groups} holding that group's correlation, and \code{diff}
+#'   (\code{groups[1] - groups[2]}), sorted by descending absolute difference
+#'   and truncated to the top \code{n} rows.
+#'
+#' @examples
+#' set.seed(1)
+#' m1 <- cor(matrix(rnorm(60), ncol = 6))
+#' m2 <- cor(matrix(rnorm(60), ncol = 6))
+#' dimnames(m2) <- dimnames(m1) <- list(letters[1:6], letters[1:6])
+#' top_cor_diff(m1, m2, groups = c("Study 1", "Study 2"), n = 5)
+#'
+#' @seealso [pub_cors_by()]
+#' @export
+
+top_cor_diff <- function(cor1, cor2, groups, n = 10, rnd = 2) {
+
+  stopifnot(
+    is.matrix(cor1),
+    is.matrix(cor2),
+    identical(dim(cor1), dim(cor2))
+  )
+
+  # Upper-triangle indices
+  idx <- which(upper.tri(cor1), arr.ind = TRUE)
+
+  # Extract values
+  r1 <- cor1[idx]
+  r2 <- cor2[idx]
+  d  <- r1 - r2
+
+  out <- data.frame(
+    var1 = rownames(cor1)[idx[, 1]],
+    var2 = colnames(cor1)[idx[, 2]],
+    r_g1 = r1,
+    r_g2 = r2,
+    diff = d,
+    abs_diff = abs(d),
+    row.names = NULL
+  )
+
+  # Name the group columns dynamically
+  names(out)[names(out) == "r_g1"] <- groups[1]
+  names(out)[names(out) == "r_g2"] <- groups[2]
+
+  #> Round numeric
+  out[] <- lapply(out, function(x) {
+    if (is.numeric(x)) round(x, rnd) else x
+  })
+
+  # Order and return top n
+  out <- out[order(out$abs_diff, decreasing = TRUE), ]
+
+  #> remove absolute difference column
+  out <- out[, !names(out) %in% "abs_diff"]
+
+  head(out, n)
+}
+
+#' Print method for \code{pub_cors_mat} objects
+#'
+#' Prints a \code{pub_cors_mat} matrix (as produced by [pub_cors_by()] or
+#' [split_cors()]) along with its upper/lower-triangle note and, if present,
+#' the attached group/component difference matrix.
+#'
+#' @param x An object of class \code{"pub_cors_mat"}.
+#' @param show_diff Logical; if \code{TRUE} (default) and a \code{"group_diff"}
+#'   (or \code{"split_diff"}) attribute is present, also print its difference
+#'   matrix.
+#' @param ... Additional arguments passed to the underlying \code{print()} call.
+#'
+#' @return \code{x}, invisibly.
+#'
+#' @seealso [pub_cors_by()], [split_cors()]
+#' @export
+
+print.pub_cors_mat <- function(x, show_diff = TRUE, ...) {
+
+  # --- Safely print the matrix only (no class, no attributes) ---
+  y <- unclass(x)
+  attributes(y) <- attributes(y)[c("dim", "dimnames")]
+  print(y, ...)
+
+  # --- Print the note ---
+  note <- attr(x, "note")
+  if (!is.null(note)) {
+    cat("\n", note, "\n", sep = "")
+  }
+
+  # --- Print group/component differences ---
+  if (show_diff) {
+    gd <- attr(x, "group_diff")
+    if (is.null(gd)) gd <- attr(x, "split_diff")
+
+    if (!is.null(gd)) {
+      cat("\n", gd$contrast, "\n\n", sep = "")
+      print(gd$diff, ...)
+    }
+  }
+
+  invisible(x)
 }
 
 #' Single-group (pooled) correlation matrix with publication labels
@@ -495,6 +642,166 @@ pub_cors_all <- function(data,
                             rnd = rnd)
 
   return(cor_all)
+
+}
+
+
+#' Publish-ready within- vs. between-group correlation display
+#'
+#' Decomposes a set of raw variables into within- and between-group components
+#' via [mlm_groupmean()], then builds a single matrix with the within-group
+#' correlations in the upper triangle and the between-group correlations in
+#' the lower triangle. Optionally attaches a within-minus-between difference
+#' matrix, analogous to the group-difference matrix from [pub_cors_by()].
+#'
+#' @param data A data frame.
+#' @param cor_vars Character vector of raw variable names to decompose and
+#'   correlate.
+#' @param nesting_var The clustering/nesting variable that defines groups
+#'   (e.g., participant ID for repeated-measures data); can be supplied bare
+#'   (unquoted) or as a string.
+#' @param rename_vec Optional named character vector for renaming variables
+#'   (robust to old→new vs. new→old mapping); see [rename_rnd_cor()]. Should
+#'   map the original \code{cor_vars} names, not the \code{WG_}/\code{BG_}
+#'   prefixed names.
+#' @param rename_cols Logical; if \code{TRUE}, row names become
+#'   \code{"<original> (1..n)"} and column names become \code{"1..n"}.
+#' @param diag_from How to fill the diagonal in the combined matrix; passed to
+#'   [combine_corr_triangles()] (default \code{"one"}).
+#' @param cor_use Passed to [stats::cor()] \code{use=} argument.
+#' @param diff_cor Logical; if \code{TRUE} (default), also compute a
+#'   within-minus-between difference matrix and a table of the largest
+#'   absolute differences, attached as the \code{"split_diff"} attribute.
+#' @param rnd Integer number of decimals to round to before combining.
+#' @param n_top_diff Integer; number of largest-magnitude differences to keep
+#'   in the \code{top_diff} table when \code{diff_cor = TRUE}. Default 10.
+#' @param within_affix,between_affix,affix_type Passed through to
+#'   [mlm_groupmean()] to control how the within-/between-group variables are
+#'   named; must match what you'd otherwise pass to that function.
+#'
+#' @details
+#' Within-group correlations are computed on the individual-level within-group
+#' deviation scores (\code{WG_} variables), using every row of \code{data}.
+#' Between-group correlations are computed on the group-level means
+#' (\code{BG_} variables) after reducing to one row per level of
+#' \code{nesting_var} — i.e., on the distinct group means, not on the
+#' individual-level rows with the group mean repeated — so that groups are
+#' weighted equally regardless of group size.
+#'
+#' Both correlation matrices are re-labeled with the original \code{cor_vars}
+#' names (rather than the \code{WG_}/\code{BG_} prefixed names) before being
+#' combined, so \code{rename_vec} should map the original variable names.
+#'
+#' @return A matrix of class \code{"pub_cors_mat"} with attribute
+#'   \code{note = "Upper triangle = Within-group, Lower triangle = Between-group"},
+#'   and (when \code{diff_cor = TRUE}) a \code{"split_diff"} attribute
+#'   containing a \code{contrast} label, the raw \code{diff} matrix
+#'   (within - between), and a \code{top_diff} data frame of the
+#'   \code{n_top_diff} largest absolute differences. Use
+#'   [print.pub_cors_mat()] to view the note and difference matrix alongside
+#'   the combined correlation matrix.
+#'
+#' @examples
+#' set.seed(1)
+#' df <- data.frame(
+#'   id = rep(1:20, each = 5),
+#'   A = rnorm(100), B = rnorm(100), C = rnorm(100)
+#' )
+#' split_cors(
+#'   data = df,
+#'   cor_vars = c("A", "B", "C"),
+#'   nesting_var = id,
+#'   rename_vec = c(A = "Alpha", B = "Beta", C = "Gamma"),
+#'   rnd = 2
+#' )
+#'
+#' @seealso [mlm_groupmean()], [pub_cors_by()], [combine_corr_triangles()],
+#'   [top_cor_diff()], [print.pub_cors_mat()]
+#' @export
+
+split_cors <- function(data,
+                       cor_vars,
+                       nesting_var,
+                       rename_vec = NULL,
+                       rename_cols = TRUE,
+                       diag_from = "one",
+                       cor_use = "pairwise",
+                       diff_cor = TRUE,
+                       rnd = 2,
+                       n_top_diff = 10,
+                       within_affix = "WG",
+                       between_affix = "BG",
+                       affix_type = c("prefix", "suffix")) {
+
+  #> base r version of allowing bare name or string as input for nesting_var
+  expr <- substitute(nesting_var)
+  gv <- if (is.symbol(expr)) deparse(expr) else as.character(nesting_var)[1L]
+
+  affix_type <- match.arg(affix_type)
+
+  #> decompose cor_vars into within-/between-group components
+  data <- mlm_groupmean(data,
+                        variables = cor_vars,
+                        group = gv,
+                        within_affix = within_affix,
+                        between_affix = between_affix,
+                        affix_type = affix_type,
+                        include_z = FALSE)
+
+  #> reconstruct the WG_/BG_ names mlm_groupmean() generated internally
+  if (affix_type == "prefix") {
+    wg_vars <- paste0(within_affix, cor_vars)
+    bg_vars <- paste0(between_affix, cor_vars)
+  } else {
+    wg_vars <- paste0(cor_vars, within_affix)
+    bg_vars <- paste0(cor_vars, between_affix)
+  }
+
+  #> within-group correlations: every row carries a valid deviation score
+  within_cor <- cor(data[, wg_vars], use = cor_use)
+
+  #> between-group correlations: reduce to one row per group first, since the
+  #> BG_ columns just repeat the group mean for every row in that group. Using
+  #> the raw (duplicated) rows would weight larger groups more heavily.
+  grp_level <- data[!duplicated(data[[gv]]), bg_vars, drop = FALSE]
+  between_cor <- cor(grp_level, use = cor_use)
+
+  #> re-label both matrices with the original variable names before combining
+  dimnames(within_cor) <- list(cor_vars, cor_vars)
+  dimnames(between_cor) <- list(cor_vars, cor_vars)
+
+  cor1 <- rename_rnd_cor(within_cor,
+                         rename_vec = rename_vec,
+                         rename_cols = FALSE,
+                         rnd = rnd)
+  cor2 <- rename_rnd_cor(between_cor,
+                         rename_vec = rename_vec,
+                         rename_cols = FALSE,
+                         rnd = rnd)
+
+  #> within-group on top (upper triangle), between-group on bottom (lower)
+  out <- combine_corr_triangles(cor1, cor2,
+                                diag_from = diag_from,
+                                rename_cols = rename_cols)
+
+  attr(out, "note") <- "Upper triangle = Within-group, Lower triangle = Between-group"
+  class(out) <- c("pub_cors_mat", class(out))
+
+  #> If I want the difference matrix, add it onto "out" as an attribute
+  if (diff_cor) {
+    diff <- within_cor - between_cor
+    top_diffs <- top_cor_diff(within_cor, between_cor,
+                              groups = c("Within", "Between"),
+                              n = n_top_diff)
+    diff <- rename_rnd_cor(diff, rename_vec = rename_vec, rename_cols = rename_cols, rnd = rnd)
+    attr(out, "split_diff") <- list(
+      contrast = "Within - Between differences",
+      diff = diff,
+      top_diff = top_diffs
+    )
+  }
+
+  return(out)
 
 }
 
