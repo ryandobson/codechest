@@ -59,7 +59,7 @@ and sample size information using
 interaction order (main effects first, then two-way, then higher-order).}
 }
 \value{
-A formatted \code{\link[flextable:flextable]{flextable::flextable}} object representing an APA-style model
+A formatted \code{\link[flextable:flextable]{flextable}} object representing an APA-style model
 summary table.
 }
 \description{

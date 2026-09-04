@@ -5,3 +5,4 @@
 ^data-raw$
 ^\.positai$
 ^\.claude$
+^.*_architecture\.md$

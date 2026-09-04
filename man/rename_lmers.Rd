@@ -36,9 +36,9 @@ models_expanded[[1]]$tidy_tbl
 \seealso{
 \code{\link{rename_lmer}}, \code{\link{create_nice_names}}
 
-Other renaming_helpers: 
-\code{\link{create_nice_name}()},
-\code{\link{create_nice_names}()},
-\code{\link{rename_lmer}()}
+Other renaming_helpers:
+\code{\link[=create_nice_name]{create_nice_name()}},
+\code{\link[=create_nice_names]{create_nice_names()}},
+\code{\link[=rename_lmer]{rename_lmer()}}
 }
 \concept{renaming_helpers}

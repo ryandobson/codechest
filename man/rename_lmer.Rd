@@ -44,9 +44,9 @@ head(tbl)
 
 }
 \seealso{
-Other renaming_helpers: 
-\code{\link{create_nice_name}()},
-\code{\link{create_nice_names}()},
-\code{\link{rename_lmers}()}
+Other renaming_helpers:
+\code{\link[=create_nice_name]{create_nice_name()}},
+\code{\link[=create_nice_names]{create_nice_names()}},
+\code{\link[=rename_lmers]{rename_lmers()}}
 }
 \concept{renaming_helpers}

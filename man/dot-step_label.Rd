@@ -24,15 +24,15 @@ Builds a label of the form \code{"\if{html}{\out{<name>}} (step \%02d, \if{html}
  }
 }
 \seealso{
-Other print_helpers: 
-\code{\link{.diff_removed}()},
-\code{\link{.get_fixed}()},
-\code{\link{.model_info}()},
-\code{\link{.norm_fe_term}()},
-\code{\link{.norm_vec}()},
-\code{\link{.re_corr_status}()},
-\code{\link{.re_terms_from_model}()},
-\code{\link{.wrapcat}()},
-\code{\link{print.fixed_effect_drop_history}()}
+Other print_helpers:
+\code{\link[=.diff_removed]{.diff_removed()}},
+\code{\link[=.get_fixed]{.get_fixed()}},
+\code{\link[=.model_info]{.model_info()}},
+\code{\link[=.norm_fe_term]{.norm_fe_term()}},
+\code{\link[=.norm_vec]{.norm_vec()}},
+\code{\link[=.re_corr_status]{.re_corr_status()}},
+\code{\link[=.re_terms_from_model]{.re_terms_from_model()}},
+\code{\link[=.wrapcat]{.wrapcat()}},
+\code{\link[=print.fixed_effect_drop_history]{print.fixed_effect_drop_history()}}
 }
 \concept{print_helpers}

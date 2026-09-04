@@ -30,9 +30,9 @@ create_nice_name(df, "age")     # c(age = "age")
 
 }
 \seealso{
-Other renaming_helpers: 
-\code{\link{create_nice_names}()},
-\code{\link{rename_lmer}()},
-\code{\link{rename_lmers}()}
+Other renaming_helpers:
+\code{\link[=create_nice_names]{create_nice_names()}},
+\code{\link[=rename_lmer]{rename_lmer()}},
+\code{\link[=rename_lmers]{rename_lmers()}}
 }
 \concept{renaming_helpers}
