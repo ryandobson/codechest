@@ -1,0 +1,320 @@
+---
+title: "The `anova_*` functions"
+subtitle: "What they do, and the thinking behind them"
+author: "Ryan Dobson"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    embed-resources: true
+    code-fold: false
+    theme: cosmo
+knitr:
+  opts_chunk:
+    comment: "#>"
+    collapse: true
+    message: false
+    warning: false
+    fig-width: 8
+    fig-height: 5
+    dpi: 110
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(codechest)
+library(ggplot2)
+```
+
+## The idea in three sentences
+
+A complete, defensible one-way ANOVA takes a page of code: descriptives, two
+or three assumption checks, the test, an effect size, group means with the
+right standard error, a figure, and a sentence. Most of that page is the same
+every time, and the parts that vary are decisions you should be making
+deliberately rather than retyping.
+
+These functions do the routine parts in one line each, and make the
+decisions visible: **what you should do next depends on what the assumption
+checks found**, so the checks are a separate step that ends in a
+recommendation with a citation attached.
+
+Everything below runs on `PlantGrowth`, which ships with R, so anything here
+can be pasted and run.
+
+## Assumptions first, and separately
+
+This is the design decision everything else follows from.
+
+Assumption checking is not a formality you complete before the "real"
+analysis. It *determines* which analysis is the right one. So it is its own
+function, and it ends by telling you what to run.
+
+```{r}
+#| label: check
+fit <- aov(weight ~ group, data = PlantGrowth)
+anova_check(fit)
+```
+
+Three things to notice.
+
+**Normality is tested on the residuals, not the raw scores.** The raw values
+pool three groups with different means, so they can look non-normal when every
+group is perfectly normal. This is the single most common error in student
+work, and it is not something you should have to remember.
+
+**Independence is reported as "not testable" rather than passing.** It is a
+property of how the study was run. No test can confirm it, so the function
+does not pretend otherwise.
+
+**The output ends with a recommendation, not a verdict.** Which brings us to
+the point.
+
+### The recommendation changes with the data
+
+Same one line of code. Different data. Different advice.
+
+```{r}
+#| label: unequal-variances
+# unequal variances AND unequal n: the case that actually distorts F
+set.seed(11)
+d <- data.frame(
+  g = factor(rep(c("a", "b", "c"), times = c(30, 10, 10))),
+  y = c(rnorm(30, 10, 1), rnorm(10, 11, 6), rnorm(10, 12, 6))
+)
+print(anova_check(y ~ g, data = d), verbosity = "short")
+```
+
+```{r}
+#| label: non-normal
+# skewed residuals in small groups
+set.seed(13)
+d2 <- data.frame(
+  g = factor(rep(c("a", "b", "c"), each = 10)),
+  y = c(rexp(10, .2), rexp(10, .2) + 1, rexp(10, .2) + 2)
+)
+print(anova_check(y ~ g, data = d2), verbosity = "short")
+```
+
+That second recommendation is deliberately *not* "transform the outcome."
+Field and Wilcox (2017) give six reasons transformations are seldom worth it,
+the sharpest being that transforming changes the hypothesis you are testing.
+They are also pointed that trimming at 2.5 *SD* and then running OLS is worse
+than doing nothing, because the *SD* is itself pulled by the outliers, so they
+get masked, and the standard errors afterwards are wrong at any sample size.
+
+The recommendation rules live in one table rather than being scattered through
+the tests, so what the package advises can be read, argued with, and changed
+in one place.
+
+## Every claim carries its citation
+
+Each recommendation names the concepts it rests on. Those are keys into a
+reference registry, so the reasoning is always one call away.
+
+```{r}
+#| label: ref-homogeneity
+anova_ref("homogeneity")
+```
+
+```{r}
+#| label: ref-omega
+anova_ref("omega_squared")
+```
+
+Equation numbers are from Maxwell, Delaney and Kelly (2017, 3rd ed.), read out
+of the book rather than remembered. Where an equation number has not been
+confirmed it is left blank rather than guessed, on the principle that a wrong
+equation number is worse than a missing one, because a reader cannot tell it
+is wrong.
+
+```{r}
+#| label: refs-todo
+anova_refs_todo()
+```
+
+## The analysis
+
+Once the checks say to proceed:
+
+```{r}
+#| label: report
+anova_report(fit)
+```
+
+Two effect sizes, because the distinction matters and is easy to get wrong.
+$R^2$ (what most of psychology calls $\eta^2$ in this context) describes the
+sample and is biased upward as an estimate of the population value.
+$\hat{\omega}^2$ corrects that bias and is the one to report.
+
+$$\hat{\omega}^2 = \frac{SS_{effect} - df_{effect} \cdot MS_W}{SS_{total} + MS_W}$$
+
+## Group means, with the right standard error
+
+```{r}
+#| label: means
+anova_means(fit)
+```
+
+The standard error is the **model-based** one:
+
+$$SE(\bar{Y_j}) = \sqrt{\frac{MS_W}{n_j}}$$
+
+not each group's own $s_j/\sqrt{n_j}$. That is the standard error consistent
+with the *F* test being reported alongside it, so error bars built from it
+match the model. Because the design is balanced, all three come out equal,
+which is the model saying it has one variance estimate and equal *n*.
+
+`pooled = FALSE` gives the per-group version, which is what you want when
+homogeneity is violated.
+
+## The figure
+
+```{r}
+#| label: figure
+anova_plot(fit, title = "Plant growth by treatment")
+```
+
+The message underneath is not decoration. Figures are where quiet decisions
+get made, so the ones this function made are stated, along with the line of
+code to change them.
+
+The axis spans the data **and** the confidence intervals plus 10%, rather than
+zooming tight to the data. A truncated axis exaggerates differences between
+means. For an outcome with a real measurement scale, say a 1–7 Likert item,
+pass it and it is used exactly, with every point labelled:
+
+```{r}
+#| label: likert
+set.seed(5)
+lik <- data.frame(
+  cond   = factor(rep(c("control", "primed"), each = 40)),
+  rating = c(sample(3:6, 40, TRUE), sample(4:7, 40, TRUE))
+)
+anova_plot(aov(rating ~ cond, data = lik), y_range = c(1, 7),
+           title = "A 1-7 item, shown on its own scale", quiet = TRUE)
+```
+
+Limits are applied with `coord_cartesian()`, which zooms. The obvious
+alternative, `scale_y_continuous(limits = )`, silently *drops* observations
+outside the range, which would change the violin and the intervals rather than
+just the view of them.
+
+## Does the conclusion survive the decisions you could have made?
+
+Field and Wilcox's central recommendation is that sensitivity analysis should
+be routine: fit the conventional model and a robust counterpart, report either
+where they agree, report the robust one where they do not. Their stronger
+claim is that this comparison is the only known way to judge whether a
+conventional method gave a reasonable answer.
+
+`anova_multi()` automates that and widens it, crossing the small analysis
+decisions you could defensibly have made.
+
+```{r}
+#| label: multiverse
+set.seed(8)
+sk <- data.frame(
+  g = factor(rep(c("ctrl", "trt"), each = 20)),
+  y = c(rlnorm(20, 2.0, .85), rlnorm(20, 2.45, .85))
+)
+mv <- anova_multi(y ~ g, data = sk, contrast = c("trt", "ctrl"))
+mv
+```
+
+Here the conventional analysis gives *p* = .010 and the trimmed-means version
+gives *p* = .051. That is exactly the situation the tool exists to surface: a
+conclusion resting on one defensible decision.
+
+```{r}
+#| label: forest
+#| fig-height: 5.5
+anova_multi_plot(mv)
+```
+
+The `CI vs base` column is the price of robustness in the only currency that
+matters here: how much wider the interval got.
+
+## Repeated measures
+
+Within-subjects designs need long-format data and a subject identifier. The
+wide matrix needed for the sphericity test is built internally, so nothing is
+reshaped by hand.
+
+```{r}
+#| label: within
+set.seed(9)
+n <- 20
+subj <- rnorm(n, 0, 5)
+long <- data.frame(
+  participant = factor(rep(seq_len(n), 4)),
+  block = factor(rep(paste0("b", 1:4), each = n)),
+  score = c(subj + rnorm(n, 20, 2), subj + rnorm(n, 22, 9),
+            subj + rnorm(n, 24, 2), subj + rnorm(n, 25, 14))
+)
+print(anova_check(score ~ block, data = long, id = "participant"),
+      verbosity = "short")
+```
+
+Sphericity is checked, both epsilons are reported, and the correction is
+chosen on the usual $\varepsilon < .75$ convention rather than left to you.
+
+## How it is put together
+
+Six layers, and the separation is the point:
+
+| Layer | Does |
+|---|---|
+| Orchestration | `anova_check()`, `anova_workup()`: what you call |
+| Design engines | one per design, knowing which assumptions apply |
+| Tests | each returns a *finding*: a result plus a severity |
+| Knowledge base | the reference registry and the recommendation rules |
+| Presentation | print methods, figures, the APA sentence |
+| Multiverse | `anova_multi()` |
+
+The invariant that keeps it honest: **a test produces a finding; a finding
+does not know what to do about itself.** Changing what the package advises
+about unequal variances means editing one rule, not Levene's test.
+
+Everything is base R inside, plus ggplot2 for figures. Levene's test is
+implemented directly rather than importing `car`, and is verified against
+`car::leveneTest()` to ten decimal places. The Greenhouse–Geisser and
+Huynh–Feldt epsilons are computed from the covariance matrix and verified
+against R's own `anova.mlm`.
+
+## What is not built yet
+
+Being explicit about this, because a tool that quietly does the wrong thing is
+worse than one that refuses:
+
+- **Factorial and mixed designs.** Not implemented. `anova_check()` will tell
+  you so rather than guess.
+- **Generalized $\eta^2$.** The right effect size for repeated-measures and
+  factorial designs. Until it exists, `anova_report()` **refuses** those
+  models rather than returning a plausible-looking wrong number.
+- **Post hoc comparisons.** Not yet. The omnibus test does not license claims
+  about specific pairs, and the package does not pretend otherwise.
+
+## References
+
+Field, A. P., & Wilcox, R. R. (2017). Robust statistical methods: A primer for
+clinical psychology and experimental psychopathology researchers. *Behaviour
+Research and Therapy, 98*, 19–38.
+
+Lakens, D. (2013). Calculating and reporting effect sizes to facilitate
+cumulative science: A practical primer for t-tests and ANOVAs. *Frontiers in
+Psychology, 4*, 863.
+
+Maxwell, S. E., Delaney, H. D., & Kelly, K. (2017). *Designing experiments and
+analyzing data: A model comparison perspective* (3rd ed.). Taylor & Francis.
+
+```{r}
+#| label: textbook
+#| echo: false
+cat(anova_textbook())
+```
+
+Every other reference the package relies on is in the registry; `anova_ref()`
+with no argument lists them all.

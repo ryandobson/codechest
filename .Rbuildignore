@@ -6,3 +6,4 @@
 ^\.positai$
 ^\.claude$
 ^.*_architecture\.md$
+^anova_overview\.(qmd|html)$
