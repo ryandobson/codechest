@@ -8,7 +8,7 @@ anova_multi_plot(
   x,
   title = NULL,
   theme = c("jeremy", "dark", "gridline", "none"),
-  base_size = 14
+  base_size = 24
 )
 }
 \arguments{
@@ -19,7 +19,7 @@ anova_multi_plot(
 \item{theme}{One of \code{"jeremy"} (default), \code{"dark"}, \code{"gridline"}, or
 \code{"none"}; or any ggplot2 theme object or theme-returning function.}
 
-\item{base_size}{Base font size passed to the theme. Default \code{14}.}
+\item{base_size}{Base font size passed to the theme. Default \code{24}.}
 }
 \value{
 A ggplot.

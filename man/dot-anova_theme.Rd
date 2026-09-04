@@ -4,7 +4,7 @@
 \alias{.anova_theme}
 \title{Resolve the \code{theme} argument of the anova_* plot functions.}
 \usage{
-.anova_theme(theme = c("jeremy", "dark", "gridline", "none"), base_size = 14)
+.anova_theme(theme = c("jeremy", "dark", "gridline", "none"), base_size = 24)
 }
 \description{
 Accepts a shorthand name, a theme-returning function, or a ggplot2 theme

@@ -544,3 +544,143 @@ test_that("the bundled themes are free of deprecated ggplot2 arguments", {
     expect_no_warning(ggplot2::ggplot_build(anova_plot(fit, theme = th)))
   }
 })
+
+
+# ---- y axis ----------------------------------------------------------------
+
+test_that(".y_limits() pads the data and CI range by 10% when unconstrained", {
+  yl <- .y_limits(c(10, 20), ci_low = 12, ci_high = 18)
+  expect_false(yl$exact)
+  expect_equal(yl$data, c(10, 20))
+  expect_equal(yl$lim, c(9, 21))          # span 10, padded 1 each side
+})
+
+test_that(".y_limits() includes the CIs, which can sit outside the data", {
+  # a CI wider than the observed range must not be clipped off the panel
+  yl <- .y_limits(c(10, 20), ci_low = 5, ci_high = 25)
+  expect_equal(yl$full, c(5, 25))
+  expect_lt(yl$lim[1], 5)
+  expect_gt(yl$lim[2], 25)
+})
+
+test_that(".y_limits() uses an explicit range exactly, with no padding", {
+  yl <- .y_limits(c(3, 6), ci_low = 3.5, ci_high = 5.5, y_range = c(1, 7))
+  expect_true(yl$exact)
+  expect_equal(yl$lim, c(1, 7))
+  expect_equal(yl$data, c(3, 6))
+})
+
+test_that(".y_limits() sorts a reversed range and validates it", {
+  expect_equal(.y_limits(c(3, 6), 3.5, 5.5, y_range = c(7, 1))$lim, c(1, 7))
+  expect_error(.y_limits(c(3, 6), 3.5, 5.5, y_range = 5), "two numbers")
+  expect_error(.y_limits(c(3, 6), 3.5, 5.5, y_range = c(1, NA)), "two numbers")
+})
+
+test_that(".y_limits() warns when the range would hide data", {
+  expect_warning(.y_limits(c(3, 6), 3.5, 5.5, y_range = c(4, 5)),
+                 "does not cover the data")
+})
+
+test_that(".y_limits() survives a constant outcome", {
+  yl <- .y_limits(rep(5, 10), 5, 5)
+  expect_true(yl$lim[2] > yl$lim[1])       # a zero-span axis would be invalid
+})
+
+test_that("limits zoom rather than drop observations", {
+  skip_if_not_installed("ggplot2")
+  fit <- aov(weight ~ group, data = PlantGrowth)
+
+  # scale_y_continuous(limits=) would delete rows; coord_cartesian must not
+  full <- ggplot2::ggplot_build(anova_plot(fit, quiet = TRUE))
+  clip <- suppressWarnings(
+    ggplot2::ggplot_build(anova_plot(fit, y_range = c(5, 6), quiet = TRUE)))
+  expect_identical(nrow(full$data[[1]]), nrow(clip$data[[1]]))
+  expect_gt(nrow(clip$data[[1]]), 0)
+})
+
+test_that("the axis note is attached and describes the decision", {
+  skip_if_not_installed("ggplot2")
+  fit <- aov(weight ~ group, data = PlantGrowth)
+
+  p <- anova_plot(fit, quiet = TRUE)
+  note <- attr(p, "anova_note")
+  expect_type(note, "character")
+  expect_match(note, "data ranged")
+  expect_match(note, "plus 10% each side")
+  expect_match(note, "coord_cartesian", fixed = TRUE)
+
+  exact <- attr(anova_plot(fit, y_range = c(0, 8), quiet = TRUE), "anova_note")
+  # the note is wrapped, so collapse whitespace before matching a phrase
+  expect_match(gsub("[[:space:]]+", " ", exact), "exactly, as given by y_range")
+  expect_match(exact, "c(0, 8)", fixed = TRUE)
+})
+
+test_that("quiet controls the message but not the attribute", {
+  skip_if_not_installed("ggplot2")
+  fit <- aov(weight ~ group, data = PlantGrowth)
+  expect_message(anova_plot(fit), "Y axis")
+  expect_no_message(anova_plot(fit, quiet = TRUE))
+  expect_false(is.null(attr(anova_plot(fit, quiet = TRUE), "anova_note")))
+})
+
+
+# ---- points at scale -------------------------------------------------------
+
+test_that(".point_style() thins the points as n grows", {
+  small <- .point_style(30)
+  mid   <- .point_style(150)
+  large <- .point_style(400)
+
+  expect_true(small$draw && mid$draw && large$draw)
+  expect_gt(small$alpha, mid$alpha)
+  expect_gt(mid$alpha, large$alpha)
+  expect_gt(small$size, large$size)
+})
+
+test_that(".point_style() drops the points past the threshold on auto", {
+  expect_true(.point_style(500)$draw)
+  expect_false(.point_style(501)$draw)
+  expect_match(.point_style(1500)$why, "too many to plot")
+  expect_match(.point_style(1500)$why, "points = \"all\"", fixed = TRUE)
+})
+
+test_that('points = "all" overrides the threshold', {
+  s <- .point_style(5000, "all")
+  expect_true(s$draw)
+  expect_false(s$auto)
+  expect_true(is.na(s$why))
+})
+
+test_that('points = "none" never draws, at any n', {
+  expect_false(.point_style(10, "none")$draw)
+  expect_false(.point_style(10000, "none")$draw)
+})
+
+test_that("logical points is accepted for backwards compatibility", {
+  expect_true(.point_style(30, TRUE)$draw)
+  expect_false(.point_style(30, FALSE)$draw)
+})
+
+test_that("anova_plot() reports what it did with the points", {
+  skip_if_not_installed("ggplot2")
+  set.seed(6)
+  big <- data.frame(g = factor(rep(c("a", "b"), each = 800)),
+                    y = c(rnorm(800, 10, 2), rnorm(800, 11, 2)))
+  fit <- aov(y ~ g, data = big)
+
+  auto <- anova_plot(fit, quiet = TRUE)
+  expect_match(attr(auto, "anova_note"), "too many to plot")
+  # the jitter layer is absent, so only violin + errorbar + mean remain
+  expect_length(auto$layers, 3)
+
+  forced <- anova_plot(fit, points = "all", quiet = TRUE)
+  expect_length(forced$layers, 4)
+})
+
+test_that("anova_plot() still accepts every points spelling", {
+  skip_if_not_installed("ggplot2")
+  fit <- aov(weight ~ group, data = PlantGrowth)
+  for (pt in list("auto", "all", "none", TRUE, FALSE)) {
+    expect_s3_class(anova_plot(fit, points = pt, quiet = TRUE), "ggplot")
+  }
+})

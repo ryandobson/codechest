@@ -377,13 +377,13 @@ print.anova_multiverse <- function(x, ...) {
 #' @param title Optional plot title.
 #' @param theme One of `"jeremy"` (default), `"dark"`, `"gridline"`, or
 #'   `"none"`; or any ggplot2 theme object or theme-returning function.
-#' @param base_size Base font size passed to the theme. Default `14`.
+#' @param base_size Base font size passed to the theme. Default `24`.
 #'
 #' @return A ggplot.
 #' @export
 anova_multi_plot <- function(x, title = NULL,
                              theme = c("jeremy", "dark", "gridline", "none"),
-                             base_size = 14) {
+                             base_size = 24) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("anova_multi_plot() needs ggplot2.", call. = FALSE)

@@ -8,13 +8,15 @@ anova_plot(
   model,
   conf = 0.95,
   pooled = TRUE,
-  points = TRUE,
+  points = c("auto", "all", "none"),
+  y_range = NULL,
   title = NULL,
   xlab = NULL,
   ylab = NULL,
   seed = 1,
   theme = c("jeremy", "dark", "gridline", "none"),
-  base_size = 14
+  base_size = 24,
+  quiet = FALSE
 )
 }
 \arguments{
@@ -24,7 +26,12 @@ anova_plot(
 
 \item{pooled}{Model-based standard error. Default \code{TRUE}. See \code{\link[=anova_means]{anova_means()}}.}
 
-\item{points}{Draw individual observations. Turn off for large n.}
+\item{points}{\code{"auto"} (default) draws the observations, thinning them as n
+grows and dropping them past 500 per group; \code{"all"} always draws them;
+\code{"none"} never does. \code{TRUE}/\code{FALSE} are accepted as \code{"all"}/\code{"none"}.}
+
+\item{y_range}{Two numbers giving the measurement scale, e.g. \code{c(1, 7)},
+used exactly. \code{NULL} (default) uses the data range plus 10\%.}
 
 \item{title, xlab, ylab}{Passed to \code{labs()}; defaults come from the model.}
 
@@ -35,20 +42,47 @@ anova_plot(
 Geom colours follow the theme, so \code{"dark"} gets light points on a black
 panel rather than black ones that vanish.}
 
-\item{base_size}{Base font size passed to the theme. Default \code{14}; the
-themes themselves default to 24, which suits slides more than figures.}
+\item{base_size}{Base font size passed to the theme. Default \code{24}, the
+themes' own default, chosen so text stays legible in a saved PNG rather
+than only in the RStudio pane.}
+
+\item{quiet}{Suppress the note about the axis and the points.}
 }
 \value{
-A ggplot.
+A ggplot. The axis note is also attached as the \code{anova_note}
+attribute, so it is available even when \code{quiet = TRUE}.
 }
 \description{
 The figure that belongs next to a one-way ANOVA: the shape of each
-distribution, every observation, the mean, and the uncertainty around it.
+distribution, the observations, the mean, and the uncertainty around it.
 The caption states what the error bars are, which is not optional.
 }
+\section{The y axis}{
+
+By default the axis spans the data and the confidence intervals plus 10\%
+headroom each side, rather than ggplot2's tighter default. A truncated axis
+exaggerates differences between means, so the wider default is the more
+honest starting point.
+
+When the outcome has a real measurement scale, say a 1-7 Likert item or a
+percentage, pass it: \code{y_range = c(1, 7)}. It is then used exactly, with no
+padding, so the figure shows where the groups sit on the scale people
+actually responded on.
+
+Limits are applied with \code{coord_cartesian()}, which zooms. The alternative,
+\code{scale_y_continuous(limits = )}, silently \strong{drops} observations outside the
+range, which would change the violin and the confidence intervals rather
+than just the view of them.
+
+Unless \code{quiet = TRUE}, the choice is reported along with the line of code to
+paste if you want different limits.
+}
+
 \examples{
 \dontrun{
 fit <- aov(weight ~ group, data = PlantGrowth)
 anova_plot(fit, title = "Plant growth by condition")
+anova_plot(fit, y_range = c(0, 8))     # a known measurement scale
+anova_plot(fit, quiet = TRUE)
 }
 }

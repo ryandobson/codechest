@@ -79,7 +79,7 @@ anova_means <- function(model, conf = 0.95, pooled = TRUE) {
 #'
 #' @keywords internal
 .anova_theme <- function(theme = c("jeremy", "dark", "gridline", "none"),
-                        base_size = 14) {
+                        base_size = 24) {
 
   if (inherits(theme, "theme")) return(theme)
   if (is.function(theme))       return(theme(base_size = base_size))
@@ -129,58 +129,171 @@ anova_means <- function(model, conf = 0.95, pooled = TRUE) {
 
 # ---- the reporting figure --------------------------------------------------
 
+#' Choose axis limits, and explain the choice.
+#'
+#' Limits are computed over the data AND the confidence intervals, because a CI
+#' can extend past the most extreme observation and would otherwise be clipped.
+#'
+#' @keywords internal
+.y_limits <- function(y, ci_low, ci_high, y_range = NULL, pad = 0.10) {
+
+  data_rng <- range(y, na.rm = TRUE)
+  full_rng <- range(c(y, ci_low, ci_high), na.rm = TRUE)
+
+  if (!is.null(y_range)) {
+    if (length(y_range) != 2L || !is.numeric(y_range) || any(is.na(y_range))) {
+      stop("`y_range` must be two numbers, e.g. c(1, 7).", call. = FALSE)
+    }
+    lim <- sort(y_range)
+    if (lim[1] > full_rng[1] || lim[2] < full_rng[2]) {
+      warning("`y_range` does not cover the data; the plot will be zoomed in ",
+              "and some observations will fall outside the panel.",
+              call. = FALSE)
+    }
+    return(list(lim = lim, exact = TRUE, data = data_rng, full = full_rng,
+                pad = pad))
+  }
+
+  span <- diff(full_rng)
+  if (span == 0) span <- max(abs(full_rng[1]), 1) * 0.1   # all values identical
+  list(lim = c(full_rng[1] - pad * span, full_rng[2] + pad * span),
+       exact = FALSE, data = data_rng, full = full_rng, pad = pad)
+}
+
+#' How to draw individual observations at this sample size.
+#'
+#' Every point at n = 2000 is a solid blob that shows less than the violin
+#' behind it, so alpha and size shrink as n grows and the points come off
+#' entirely past the threshold.
+#'
+#' @keywords internal
+.point_style <- function(n_max, points = "auto") {
+
+  if (is.logical(points)) points <- if (isTRUE(points)) "all" else "none"
+  points <- match.arg(points, c("auto", "all", "none"))
+
+  if (points == "none") {
+    return(list(draw = FALSE, alpha = NA, size = NA, auto = FALSE,
+                why = "points suppressed (points = \"none\")"))
+  }
+
+  style <- if (n_max <= 50) {
+    list(alpha = 0.45, size = 2.0)
+  } else if (n_max <= 200) {
+    list(alpha = 0.30, size = 1.4)
+  } else if (n_max <= 500) {
+    list(alpha = 0.18, size = 0.9)
+  } else {
+    list(alpha = 0.10, size = 0.5)
+  }
+
+  if (points == "all") {
+    return(list(draw = TRUE, alpha = style$alpha, size = style$size,
+                auto = FALSE, why = NA_character_))
+  }
+
+  # points == "auto"
+  if (n_max > 500) {
+    return(list(
+      draw = FALSE, alpha = NA, size = NA, auto = TRUE,
+      why = sprintf(paste("%d observations in the largest group is too many to",
+                          "plot individually, so the points were dropped and the",
+                          "violin carries the distribution. Force them with",
+                          "points = \"all\"."), n_max)))
+  }
+  list(draw = TRUE, alpha = style$alpha, size = style$size, auto = TRUE,
+       why = if (n_max > 50)
+         sprintf("%d per group, so the points were thinned (alpha %.2f, size %.1f).",
+                 n_max, style$alpha, style$size) else NA_character_)
+}
+
 #' Violin, individual points, group mean, and confidence interval
 #'
 #' The figure that belongs next to a one-way ANOVA: the shape of each
-#' distribution, every observation, the mean, and the uncertainty around it.
+#' distribution, the observations, the mean, and the uncertainty around it.
 #' The caption states what the error bars are, which is not optional.
+#'
+#' @section The y axis:
+#' By default the axis spans the data and the confidence intervals plus 10%
+#' headroom each side, rather than ggplot2's tighter default. A truncated axis
+#' exaggerates differences between means, so the wider default is the more
+#' honest starting point.
+#'
+#' When the outcome has a real measurement scale, say a 1-7 Likert item or a
+#' percentage, pass it: `y_range = c(1, 7)`. It is then used exactly, with no
+#' padding, so the figure shows where the groups sit on the scale people
+#' actually responded on.
+#'
+#' Limits are applied with `coord_cartesian()`, which zooms. The alternative,
+#' `scale_y_continuous(limits = )`, silently **drops** observations outside the
+#' range, which would change the violin and the confidence intervals rather
+#' than just the view of them.
+#'
+#' Unless `quiet = TRUE`, the choice is reported along with the line of code to
+#' paste if you want different limits.
 #'
 #' @param model A fitted `aov()` or `lm()`.
 #' @param conf Confidence level for the bars. Default `0.95`.
 #' @param pooled Model-based standard error. Default `TRUE`. See [anova_means()].
-#' @param points Draw individual observations. Turn off for large n.
+#' @param points `"auto"` (default) draws the observations, thinning them as n
+#'   grows and dropping them past 500 per group; `"all"` always draws them;
+#'   `"none"` never does. `TRUE`/`FALSE` are accepted as `"all"`/`"none"`.
+#' @param y_range Two numbers giving the measurement scale, e.g. `c(1, 7)`,
+#'   used exactly. `NULL` (default) uses the data range plus 10%.
 #' @param title,xlab,ylab Passed to `labs()`; defaults come from the model.
 #' @param seed Seed for the jitter, so the figure is reproducible.
 #' @param theme One of `"jeremy"` (default), `"dark"`, `"gridline"`, or
 #'   `"none"`; or any ggplot2 theme object or theme-returning function.
 #'   Geom colours follow the theme, so `"dark"` gets light points on a black
 #'   panel rather than black ones that vanish.
-#' @param base_size Base font size passed to the theme. Default `14`; the
-#'   themes themselves default to 24, which suits slides more than figures.
+#' @param base_size Base font size passed to the theme. Default `24`, the
+#'   themes' own default, chosen so text stays legible in a saved PNG rather
+#'   than only in the RStudio pane.
+#' @param quiet Suppress the note about the axis and the points.
 #'
-#' @return A ggplot.
+#' @return A ggplot. The axis note is also attached as the `anova_note`
+#'   attribute, so it is available even when `quiet = TRUE`.
 #'
 #' @examples
 #' \dontrun{
 #' fit <- aov(weight ~ group, data = PlantGrowth)
 #' anova_plot(fit, title = "Plant growth by condition")
+#' anova_plot(fit, y_range = c(0, 8))     # a known measurement scale
+#' anova_plot(fit, quiet = TRUE)
 #' }
 #' @export
-anova_plot <- function(model, conf = 0.95, pooled = TRUE, points = TRUE,
+anova_plot <- function(model, conf = 0.95, pooled = TRUE,
+                       points = c("auto", "all", "none"),
+                       y_range = NULL,
                        title = NULL, xlab = NULL, ylab = NULL, seed = 1,
                        theme = c("jeremy", "dark", "gridline", "none"),
-                       base_size = 14) {
+                       base_size = 24, quiet = FALSE) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("anova_plot() needs ggplot2.", call. = FALSE)
   }
+  if (!is.logical(points)) points <- match.arg(points)
+
   pal <- .anova_palette(.is_dark_theme(theme))
-  p <- .model_parts(model)
-  d <- data.frame(group = p$g, y = p$y)
-  m <- anova_means(model, conf = conf, pooled = pooled)
+  p   <- .model_parts(model)
+  d   <- data.frame(group = p$g, y = p$y)
+  m   <- anova_means(model, conf = conf, pooled = pooled)
   names(m)[1] <- "group"
   m$group <- factor(m$group, levels = levels(p$g))
+
+  yl  <- .y_limits(d$y, m$ci_low, m$ci_high, y_range)
+  pts <- .point_style(max(m$n), points)
 
   g <- ggplot2::ggplot(d, ggplot2::aes(x = .data$group, y = .data$y)) +
     ggplot2::geom_violin(fill = pal$fill, color = pal$outline, width = 0.8)
 
-  if (points) {
+  if (pts$draw) {
     set.seed(seed)
-    g <- g + ggplot2::geom_jitter(width = 0.08, alpha = 0.45, size = 2,
-                                  color = pal$points)
+    g <- g + ggplot2::geom_jitter(width = 0.08, alpha = pts$alpha,
+                                  size = pts$size, color = pal$points)
   }
 
-  g +
+  g <- g +
     ggplot2::geom_errorbar(
       data = m,
       ggplot2::aes(x = .data$group, ymin = .data$ci_low, ymax = .data$ci_high),
@@ -188,25 +301,63 @@ anova_plot <- function(model, conf = 0.95, pooled = TRUE, points = TRUE,
     ggplot2::geom_point(
       data = m, ggplot2::aes(x = .data$group, y = .data$mean),
       size = 4, colour = pal$ink, inherit.aes = FALSE) +
+    ggplot2::coord_cartesian(ylim = yl$lim) +
     ggplot2::labs(
       x = if (is.null(xlab)) p$g_name else xlab,
       y = if (is.null(ylab)) p$y_name else ylab,
       title = title,
-      # wrapped: at larger base_size an unwrapped caption runs off the panel
+      # wrapped: at base_size 24 an unwrapped caption runs off the panel
       caption = paste(strwrap(sprintf(
         "Large point = group mean, bars = %.0f%% CI (%s).%s",
         conf * 100, attr(m, "se_type"),
-        if (points) " Small points are individual observations." else ""),
-        width = 70), collapse = "
-")
+        if (pts$draw) " Small points are individual observations." else ""),
+        width = 70), collapse = "\n")
     ) +
     .anova_theme(theme, base_size) +
     # the themes do not style the caption, so on a dark panel it would
     # inherit grey30 and disappear
     ggplot2::theme(plot.caption = ggplot2::element_text(
       colour = pal$ink, size = base_size * 0.6, hjust = 0))
+
+  note <- .axis_note(yl, pts)
+  attr(g, "anova_note") <- note
+  if (!quiet) message(note)
+  g
 }
 
+#' Build the note explaining the axis and point decisions.
+#' @keywords internal
+.axis_note <- function(yl, pts) {
+
+  fmt <- function(x) format(x, digits = 4, trim = TRUE)
+
+  axis_line <- if (yl$exact) {
+    sprintf(paste("Y axis: data ranged %s to %s; axis set to %s to %s exactly,",
+                  "as given by y_range."),
+            fmt(yl$data[1]), fmt(yl$data[2]), fmt(yl$lim[1]), fmt(yl$lim[2]))
+  } else {
+    sprintf(paste("Y axis: data ranged %s to %s; axis set to %s to %s, which is",
+                  "the data and CIs plus %d%% each side. For a real measurement",
+                  "scale (a 1-7 Likert item, a percentage) pass it exactly, e.g.",
+                  "y_range = c(1, 7)."),
+            fmt(yl$data[1]), fmt(yl$data[2]), fmt(yl$lim[1]), fmt(yl$lim[2]),
+            round(yl$pad * 100))
+  }
+
+  parts <- c(paste(strwrap(axis_line, width = 76), collapse = "\n"))
+
+  if (!is.na(pts$why)) {
+    parts <- c(parts, paste(strwrap(paste("Points:", pts$why), width = 76),
+                            collapse = "\n"))
+  }
+
+  parts <- c(parts,
+             "To adjust the axis by hand, add this to the plot:",
+             sprintf("  + ggplot2::coord_cartesian(ylim = c(%s, %s))",
+                     fmt(yl$lim[1]), fmt(yl$lim[2])))
+
+  paste(parts, collapse = "\n")
+}
 
 # ---- the test, effect sizes, and the sentence ------------------------------
 
@@ -361,7 +512,7 @@ anova_workup <- function(object, data = NULL, id = NULL, plot = TRUE, ...) {
 #' @param bins Bins for the residual histogram.
 #' @param theme One of `"jeremy"` (default), `"dark"`, `"gridline"`, or
 #'   `"none"`; or any ggplot2 theme object or theme-returning function.
-#' @param base_size Base font size passed to the theme. Default `14`.
+#' @param base_size Base font size passed to the theme. Default `24`.
 #'
 #' @return A named list of ggplots: `qq`, `residuals`, `boxplot`.
 #'
@@ -376,7 +527,7 @@ anova_workup <- function(object, data = NULL, id = NULL, plot = TRUE, ...) {
 #' @export
 anova_check_plots <- function(x, bins = 12,
                               theme = c("jeremy", "dark", "gridline", "none"),
-                              base_size = 14) {
+                              base_size = 24) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("anova_check_plots() needs ggplot2.", call. = FALSE)
