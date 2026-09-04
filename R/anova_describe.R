@@ -115,6 +115,22 @@ anova_means <- function(model, conf = 0.95, pooled = TRUE) {
   FALSE
 }
 
+#' Colours for the groups themselves.
+#'
+#' `TRUE` uses `jermeys_palette`, recycled if there are more groups than
+#' colours. `FALSE` returns NULL and the plot stays greyscale. A character
+#' vector is used as given.
+#'
+#' Colour carries group identity; the mean and its interval stay in the
+#' theme's ink colour so the statistics read against any fill.
+#'
+#' @keywords internal
+.group_colours <- function(colour, n) {
+  if (isFALSE(colour) || is.null(colour)) return(NULL)
+  if (is.character(colour)) return(rep_len(colour, n))
+  rep_len(jermeys_palette, n)
+}
+
 #' Geom colours matched to a light or dark panel.
 #' @keywords internal
 .anova_palette <- function(dark = FALSE) {
@@ -297,7 +313,13 @@ anova_means <- function(model, conf = 0.95, pooled = TRUE) {
 #' @param y_breaks Axis breaks. `NULL` (default) labels every point of a
 #'   whole-numbered scale spanning 10 or less, e.g. every value of a 1-7
 #'   Likert item, and otherwise leaves ggplot2's choice alone.
-#' @param title,xlab,ylab Passed to `labs()`; defaults come from the model.
+#' @param colour `TRUE` (default) colours the groups with `jermeys_palette`;
+#'   `FALSE` keeps the plot greyscale; a character vector of colours is used
+#'   as given. The mean and its interval stay in the theme's ink colour, so
+#'   the statistics read against any fill.
+#' @param title,xlab,ylab Passed to `labs()`. The axis labels default to the
+#'   variable's `"label"` attribute, as set by [apply_variable_info()],
+#'   falling back to the variable name.
 #' @param seed Seed for the jitter, so the figure is reproducible.
 #' @param theme One of `"jeremy"` (default), `"dark"`, `"gridline"`, or
 #'   `"none"`; or any ggplot2 theme object or theme-returning function.
@@ -321,7 +343,7 @@ anova_means <- function(model, conf = 0.95, pooled = TRUE) {
 #' @export
 anova_plot <- function(model, conf = 0.95, pooled = TRUE,
                        points = c("auto", "all", "none"),
-                       y_range = NULL, y_breaks = NULL,
+                       y_range = NULL, y_breaks = NULL, colour = TRUE,
                        title = NULL, xlab = NULL, ylab = NULL, seed = 1,
                        theme = c("jeremy", "dark", "gridline", "none"),
                        base_size = 24, quiet = FALSE) {
@@ -343,13 +365,33 @@ anova_plot <- function(model, conf = 0.95, pooled = TRUE,
   brk <- if (is.null(y_breaks)) .y_breaks(d$y, y_range) else y_breaks
   mps <- .mean_point_size(m$ci_low, m$ci_high, yl$lim)
 
-  g <- ggplot2::ggplot(d, ggplot2::aes(x = .data$group, y = .data$y)) +
-    ggplot2::geom_violin(fill = pal$fill, color = pal$outline, width = 0.8)
+  cols <- .group_colours(colour, nlevels(d$group))
+
+  g <- ggplot2::ggplot(d, ggplot2::aes(x = .data$group, y = .data$y))
+
+  if (is.null(cols)) {
+    g <- g + ggplot2::geom_violin(fill = pal$fill, color = pal$outline,
+                                  width = 0.8)
+  } else {
+    g <- g +
+      ggplot2::geom_violin(
+        ggplot2::aes(fill = .data$group, colour = .data$group),
+        width = 0.8, alpha = 0.35, linewidth = 0.7, show.legend = FALSE) +
+      ggplot2::scale_fill_manual(values = cols) +
+      ggplot2::scale_colour_manual(values = cols)
+  }
 
   if (pts$draw) {
     set.seed(seed)
-    g <- g + ggplot2::geom_jitter(width = 0.08, alpha = pts$alpha,
-                                  size = pts$size, color = pal$points)
+    g <- g + if (is.null(cols)) {
+      ggplot2::geom_jitter(width = 0.08, alpha = pts$alpha,
+                           size = pts$size, color = pal$points)
+    } else {
+      # the group colour again, so points read as belonging to their violin
+      ggplot2::geom_jitter(ggplot2::aes(colour = .data$group),
+                           width = 0.08, alpha = pts$alpha,
+                           size = pts$size, show.legend = FALSE)
+    }
   }
 
   g <- g +
@@ -362,8 +404,8 @@ anova_plot <- function(model, conf = 0.95, pooled = TRUE,
       size = mps$size, colour = pal$ink, inherit.aes = FALSE) +
     ggplot2::coord_cartesian(ylim = yl$lim) +
     ggplot2::labs(
-      x = if (is.null(xlab)) p$g_name else xlab,
-      y = if (is.null(ylab)) p$y_name else ylab,
+      x = if (is.null(xlab)) p$g_label else xlab,
+      y = if (is.null(ylab)) p$y_label else ylab,
       title = title,
       # wrapped: at base_size 24 an unwrapped caption runs off the panel
       caption = paste(strwrap(sprintf(
@@ -589,6 +631,8 @@ anova_workup <- function(object, data = NULL, id = NULL, plot = TRUE, ...) {
 #'
 #' @param x An `anova_check` object, or a fitted `aov()`/`lm()`.
 #' @param bins Bins for the residual histogram.
+#' @param colour `TRUE` (default) colours the boxplot by group with
+#'   `jermeys_palette`; `FALSE` keeps it greyscale.
 #' @param theme One of `"jeremy"` (default), `"dark"`, `"gridline"`, or
 #'   `"none"`; or any ggplot2 theme object or theme-returning function.
 #' @param base_size Base font size passed to the theme. Default `24`.
@@ -604,7 +648,7 @@ anova_workup <- function(object, data = NULL, id = NULL, plot = TRUE, ...) {
 #'
 #' @seealso [anova_check()], [anova_ref()] with `"normality"`.
 #' @export
-anova_check_plots <- function(x, bins = 12,
+anova_check_plots <- function(x, bins = 12, colour = TRUE,
                               theme = c("jeremy", "dark", "gridline", "none"),
                               base_size = 24) {
 
@@ -615,21 +659,20 @@ anova_check_plots <- function(x, bins = 12,
   thm <- .anova_theme(theme, base_size)
 
   if (inherits(x, "anova_check")) {
-    model  <- x$model
-    y_name <- x$y_name
-    g_name <- x$g_name
+    model <- x$model
   } else if (inherits(x, c("aov", "lm"))) {
-    model  <- x
-    pp     <- .model_parts(model)
-    y_name <- pp$y_name
-    g_name <- pp$g_name
+    model <- x
   } else {
     stop("`x` must be an anova_check object or a fitted aov()/lm().", call. = FALSE)
   }
 
-  mf  <- stats::model.frame(model)
+  pp     <- .model_parts(model)
+  y_name <- pp$y_label
+  g_name <- pp$g_label
+
   res <- as.vector(stats::residuals(model))
-  d   <- data.frame(resid = res, group = factor(mf[[2]]), y = mf[[1]])
+  d   <- data.frame(resid = res, group = pp$g, y = pp$y)
+  cols <- .group_colours(colour, nlevels(d$group))
 
   qq <- ggplot2::ggplot(d, ggplot2::aes(sample = .data$resid)) +
     ggplot2::stat_qq(colour = pal$ink) +
@@ -643,9 +686,16 @@ anova_check_plots <- function(x, bins = 12,
                   title = "Residuals from the model") + thm
 
   box <- ggplot2::ggplot(d, ggplot2::aes(x = .data$group, y = .data$y)) +
-    ggplot2::geom_boxplot(fill = pal$box_fill, colour = pal$ink) +
+    ggplot2::geom_boxplot(fill = if (is.null(cols)) pal$box_fill else NA,
+                          colour = pal$ink) +
     ggplot2::labs(x = g_name, y = y_name,
                   title = "Spread within each condition") + thm
+
+  if (!is.null(cols)) {
+    box <- box +
+      ggplot2::aes(fill = .data$group) +
+      ggplot2::scale_fill_manual(values = cols, guide = "none")
+  }
 
   list(qq = qq, residuals = hist, boxplot = box)
 }

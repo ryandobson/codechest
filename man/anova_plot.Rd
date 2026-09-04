@@ -11,6 +11,7 @@ anova_plot(
   points = c("auto", "all", "none"),
   y_range = NULL,
   y_breaks = NULL,
+  colour = TRUE,
   title = NULL,
   xlab = NULL,
   ylab = NULL,
@@ -38,7 +39,14 @@ used exactly. \code{NULL} (default) uses the data range plus 10\%.}
 whole-numbered scale spanning 10 or less, e.g. every value of a 1-7
 Likert item, and otherwise leaves ggplot2's choice alone.}
 
-\item{title, xlab, ylab}{Passed to \code{labs()}; defaults come from the model.}
+\item{colour}{\code{TRUE} (default) colours the groups with \code{jermeys_palette};
+\code{FALSE} keeps the plot greyscale; a character vector of colours is used
+as given. The mean and its interval stay in the theme's ink colour, so
+the statistics read against any fill.}
+
+\item{title, xlab, ylab}{Passed to \code{labs()}. The axis labels default to the
+variable's \code{"label"} attribute, as set by \code{\link[=apply_variable_info]{apply_variable_info()}},
+falling back to the variable name.}
 
 \item{seed}{Seed for the jitter, so the figure is reproducible.}
 

@@ -117,13 +117,45 @@
            stat_name = "F", detail = detail)
 }
 
+#' Display label for a variable, falling back to its name.
+#'
+#' Reads the "label" attribute that `apply_variable_info()` attaches, so a
+#' plot picks up "Dried plant weight (g)" rather than "weight" without being
+#' told twice. Base R rather than the labelled package, matching
+#' `dynamic_histogram()`.
+#'
+#' @keywords internal
+.nice_label <- function(x, fallback) {
+  lab <- attr(x, "label", exact = TRUE)
+  if (is.null(lab) || !is.character(lab) || length(lab) != 1L || !nzchar(lab)) {
+    return(fallback)
+  }
+  lab
+}
+
+#' Drop labelled/vctrs classes so ggplot2 sees a plain vector.
+#'
+#' haven_labelled inherits from vctrs_vctr, which ggplot2 will not scale.
+#' The label attribute is read before this is called.
+#'
+#' @keywords internal
+.strip_labelled <- function(x) {
+  if (inherits(x, "haven_labelled") || inherits(x, "vctrs_vctr")) {
+    return(as.vector(unclass(x)))
+  }
+  x
+}
+
 #' Pull the response and the single grouping factor out of a fitted model.
 #' @keywords internal
 .model_parts <- function(model) {
   mf <- stats::model.frame(model)
   if (ncol(mf) < 2L) stop("Model needs at least one predictor.", call. = FALSE)
-  list(y = mf[[1]], g = factor(mf[[2]]),
-       y_name = names(mf)[1], g_name = names(mf)[2], n = nrow(mf))
+  list(y = .strip_labelled(mf[[1]]), g = factor(mf[[2]]),
+       y_name = names(mf)[1], g_name = names(mf)[2],
+       y_label = .nice_label(mf[[1]], names(mf)[1]),
+       g_label = .nice_label(mf[[2]], names(mf)[2]),
+       n = nrow(mf))
 }
 
 #' MS_W and its df, straight off the fitted model.

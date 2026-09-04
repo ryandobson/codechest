@@ -788,3 +788,141 @@ test_that("anova_plot() shrinks the mean point at large n and says so", {
                 "anova_note")
   expect_no_match(small, "Mean point: shrunk")
 })
+
+
+# ---- axis labels from the label attribute ----------------------------------
+
+labelled_pg <- function() {
+  d <- PlantGrowth
+  attr(d$weight, "label") <- "Dried plant weight (g)"
+  attr(d$group,  "label") <- "Treatment condition"
+  d
+}
+
+test_that(".nice_label() prefers the label attribute and falls back cleanly", {
+  x <- 1:5
+  expect_identical(.nice_label(x, "weight"), "weight")
+
+  attr(x, "label") <- "Dried weight"
+  expect_identical(.nice_label(x, "weight"), "Dried weight")
+
+  attr(x, "label") <- ""                 # empty is not a usable label
+  expect_identical(.nice_label(x, "weight"), "weight")
+
+  attr(x, "label") <- c("a", "b")        # nor is a vector
+  expect_identical(.nice_label(x, "weight"), "weight")
+
+  attr(x, "label") <- 42                 # nor a number
+  expect_identical(.nice_label(x, "weight"), "weight")
+})
+
+test_that(".model_parts() carries labels through the model frame", {
+  p <- .model_parts(aov(weight ~ group, data = labelled_pg()))
+  expect_identical(p$y_label, "Dried plant weight (g)")
+  expect_identical(p$g_label, "Treatment condition")
+  expect_identical(p$y_name, "weight")     # the name is still available
+  expect_identical(p$g_name, "group")
+
+  plain <- .model_parts(aov(weight ~ group, data = PlantGrowth))
+  expect_identical(plain$y_label, "weight")
+  expect_identical(plain$g_label, "group")
+})
+
+test_that("anova_plot() labels the axes from the attributes", {
+  skip_if_not_installed("ggplot2")
+  p <- anova_plot(aov(weight ~ group, data = labelled_pg()), quiet = TRUE)
+  expect_identical(p$labels$y, "Dried plant weight (g)")
+  expect_identical(p$labels$x, "Treatment condition")
+})
+
+test_that("explicit xlab and ylab still win", {
+  skip_if_not_installed("ggplot2")
+  p <- anova_plot(aov(weight ~ group, data = labelled_pg()),
+                  xlab = "MINE X", ylab = "MINE Y", quiet = TRUE)
+  expect_identical(p$labels$x, "MINE X")
+  expect_identical(p$labels$y, "MINE Y")
+})
+
+test_that("anova_check_plots() uses the labels too", {
+  skip_if_not_installed("ggplot2")
+  p <- anova_check_plots(anova_check(aov(weight ~ group, data = labelled_pg())))
+  expect_identical(p$boxplot$labels$x, "Treatment condition")
+  expect_identical(p$boxplot$labels$y, "Dried plant weight (g)")
+})
+
+test_that("a haven_labelled outcome plots rather than erroring", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("haven")
+  d <- PlantGrowth
+  d$weight <- haven::labelled(d$weight, label = "Weight via haven")
+
+  # the vctrs class must be stripped before it reaches a ggplot2 scale
+  expect_false(inherits(.strip_labelled(d$weight), "vctrs_vctr"))
+
+  p <- anova_plot(aov(weight ~ group, data = d), quiet = TRUE)
+  expect_identical(p$labels$y, "Weight via haven")
+  expect_s3_class(ggplot2::ggplot_build(p), "ggplot_built")
+})
+
+
+# ---- colour ----------------------------------------------------------------
+
+test_that(".group_colours() honours TRUE, FALSE, and a custom vector", {
+  expect_null(.group_colours(FALSE, 3))
+  expect_null(.group_colours(NULL, 3))
+  expect_identical(.group_colours(TRUE, 3), jermeys_palette[1:3])
+  expect_identical(.group_colours(c("red", "blue"), 2), c("red", "blue"))
+})
+
+test_that(".group_colours() recycles when there are more groups than colours", {
+  n <- length(jermeys_palette) + 3
+  cols <- .group_colours(TRUE, n)
+  expect_length(cols, n)
+  expect_identical(cols[1], cols[length(jermeys_palette) + 1])
+})
+
+test_that("colour = TRUE adds fill and colour scales, FALSE does not", {
+  skip_if_not_installed("ggplot2")
+  fit <- aov(weight ~ group, data = PlantGrowth)
+
+  coloured <- anova_plot(fit, quiet = TRUE)
+  grey     <- anova_plot(fit, colour = FALSE, quiet = TRUE)
+
+  has_scale <- function(p, aes) {
+    any(vapply(p$scales$scales,
+               function(s) aes %in% s$aesthetics, logical(1)))
+  }
+  expect_true(has_scale(coloured, "fill"))
+  expect_false(has_scale(grey, "fill"))
+})
+
+test_that("custom colours reach the plot", {
+  skip_if_not_installed("ggplot2")
+  mine <- c("#1b7837", "#762a83", "#e08214")
+  p <- anova_plot(aov(weight ~ group, data = PlantGrowth),
+                  colour = mine, quiet = TRUE)
+  fills <- ggplot2::ggplot_build(p)$data[[1]]$fill
+  expect_true(all(toupper(unique(fills)) %in% toupper(mine)))
+})
+
+test_that("colour works alongside every theme, including dark", {
+  skip_if_not_installed("ggplot2")
+  fit <- aov(weight ~ group, data = PlantGrowth)
+  for (th in c("jeremy", "dark", "gridline", "none")) {
+    expect_s3_class(
+      ggplot2::ggplot_build(anova_plot(fit, theme = th, quiet = TRUE)),
+      "ggplot_built")
+  }
+})
+
+test_that("the mean and its interval stay in the theme ink, not the group colour", {
+  skip_if_not_installed("ggplot2")
+  fit <- aov(weight ~ group, data = PlantGrowth)
+
+  light <- ggplot2::ggplot_build(anova_plot(fit, quiet = TRUE))
+  dark  <- ggplot2::ggplot_build(anova_plot(fit, theme = "dark", quiet = TRUE))
+
+  # last layer is the mean point
+  expect_true(all(light$data[[length(light$data)]]$colour == "black"))
+  expect_true(all(dark$data[[length(dark$data)]]$colour == "white"))
+})

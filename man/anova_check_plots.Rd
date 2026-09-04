@@ -7,6 +7,7 @@
 anova_check_plots(
   x,
   bins = 12,
+  colour = TRUE,
   theme = c("jeremy", "dark", "gridline", "none"),
   base_size = 24
 )
@@ -15,6 +16,9 @@ anova_check_plots(
 \item{x}{An \code{anova_check} object, or a fitted \code{aov()}/\code{lm()}.}
 
 \item{bins}{Bins for the residual histogram.}
+
+\item{colour}{\code{TRUE} (default) colours the boxplot by group with
+\code{jermeys_palette}; \code{FALSE} keeps it greyscale.}
 
 \item{theme}{One of \code{"jeremy"} (default), \code{"dark"}, \code{"gridline"}, or
 \code{"none"}; or any ggplot2 theme object or theme-returning function.}
