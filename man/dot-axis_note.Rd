@@ -4,7 +4,7 @@
 \alias{.axis_note}
 \title{Build the note explaining the axis and point decisions.}
 \usage{
-.axis_note(yl, pts)
+.axis_note(yl, pts, brk = NULL, mps = NULL)
 }
 \description{
 Build the note explaining the axis and point decisions.

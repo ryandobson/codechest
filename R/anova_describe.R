@@ -129,6 +129,60 @@ anova_means <- function(model, conf = 0.95, pooled = TRUE) {
 
 # ---- the reporting figure --------------------------------------------------
 
+#' Integer axis breaks for a short discrete scale.
+#'
+#' A 1-7 Likert item labelled 2, 4, 6 is harder to read than one labelled
+#' every point, because the reader has to infer where 3 and 5 are on a scale
+#' that only ever took whole values. When the scale is short enough to label
+#' every point, do.
+#'
+#' An explicit `y_range` wins. Failing that, an outcome that is entirely whole
+#' numbers over a short span is treated as a discrete scale too, so forgetting
+#' to declare it still gives sensible breaks.
+#'
+#' @return A numeric vector of breaks, or NULL to leave ggplot2's choice alone.
+#' @keywords internal
+.y_breaks <- function(y, y_range = NULL, max_points = 10) {
+
+  whole <- function(x) all(abs(x - round(x)) < .Machine$double.eps^0.5,
+                           na.rm = TRUE)
+
+  if (!is.null(y_range)) {
+    r <- sort(y_range)
+    if (whole(r) && diff(r) <= max_points) return(seq(r[1], r[2], by = 1))
+    return(NULL)
+  }
+
+  if (whole(y)) {
+    r <- range(y, na.rm = TRUE)
+    if (diff(r) <= max_points) return(seq(r[1], r[2], by = 1))
+  }
+  NULL
+}
+
+#' Size the mean point so it cannot swallow its own confidence interval.
+#'
+#' At large n the interval becomes very short, and a fixed-size point sits on
+#' top of it and hides it. This scales the point by how much of the panel the
+#' widest interval actually occupies, so the driver is the CI-to-axis ratio
+#' rather than n directly. That also covers small n on a wide declared scale,
+#' where the same problem appears for a different reason.
+#'
+#' @keywords internal
+.mean_point_size <- function(ci_low, ci_high, ylim, base = 4) {
+
+  axis_span <- diff(range(ylim))
+  ci_span   <- suppressWarnings(max(ci_high - ci_low, na.rm = TRUE))
+  if (!is.finite(axis_span) || axis_span <= 0 || !is.finite(ci_span)) {
+    return(list(size = base, reduced = FALSE))
+  }
+
+  # a point of size s is roughly s mm across; a typical panel is ~100mm tall,
+  # so the interval is about (ci_span / axis_span) * 100 mm
+  frac <- ci_span / axis_span
+  size <- max(1.5, min(base, frac * 100))
+  list(size = size, reduced = size < base - 1e-8, frac = frac)
+}
 #' Choose axis limits, and explain the choice.
 #'
 #' Limits are computed over the data AND the confidence intervals, because a CI
@@ -240,6 +294,9 @@ anova_means <- function(model, conf = 0.95, pooled = TRUE) {
 #'   `"none"` never does. `TRUE`/`FALSE` are accepted as `"all"`/`"none"`.
 #' @param y_range Two numbers giving the measurement scale, e.g. `c(1, 7)`,
 #'   used exactly. `NULL` (default) uses the data range plus 10%.
+#' @param y_breaks Axis breaks. `NULL` (default) labels every point of a
+#'   whole-numbered scale spanning 10 or less, e.g. every value of a 1-7
+#'   Likert item, and otherwise leaves ggplot2's choice alone.
 #' @param title,xlab,ylab Passed to `labs()`; defaults come from the model.
 #' @param seed Seed for the jitter, so the figure is reproducible.
 #' @param theme One of `"jeremy"` (default), `"dark"`, `"gridline"`, or
@@ -264,7 +321,7 @@ anova_means <- function(model, conf = 0.95, pooled = TRUE) {
 #' @export
 anova_plot <- function(model, conf = 0.95, pooled = TRUE,
                        points = c("auto", "all", "none"),
-                       y_range = NULL,
+                       y_range = NULL, y_breaks = NULL,
                        title = NULL, xlab = NULL, ylab = NULL, seed = 1,
                        theme = c("jeremy", "dark", "gridline", "none"),
                        base_size = 24, quiet = FALSE) {
@@ -283,6 +340,8 @@ anova_plot <- function(model, conf = 0.95, pooled = TRUE,
 
   yl  <- .y_limits(d$y, m$ci_low, m$ci_high, y_range)
   pts <- .point_style(max(m$n), points)
+  brk <- if (is.null(y_breaks)) .y_breaks(d$y, y_range) else y_breaks
+  mps <- .mean_point_size(m$ci_low, m$ci_high, yl$lim)
 
   g <- ggplot2::ggplot(d, ggplot2::aes(x = .data$group, y = .data$y)) +
     ggplot2::geom_violin(fill = pal$fill, color = pal$outline, width = 0.8)
@@ -300,7 +359,7 @@ anova_plot <- function(model, conf = 0.95, pooled = TRUE,
       width = 0.08, linewidth = 0.9, colour = pal$ink, inherit.aes = FALSE) +
     ggplot2::geom_point(
       data = m, ggplot2::aes(x = .data$group, y = .data$mean),
-      size = 4, colour = pal$ink, inherit.aes = FALSE) +
+      size = mps$size, colour = pal$ink, inherit.aes = FALSE) +
     ggplot2::coord_cartesian(ylim = yl$lim) +
     ggplot2::labs(
       x = if (is.null(xlab)) p$g_name else xlab,
@@ -319,7 +378,13 @@ anova_plot <- function(model, conf = 0.95, pooled = TRUE,
     ggplot2::theme(plot.caption = ggplot2::element_text(
       colour = pal$ink, size = base_size * 0.6, hjust = 0))
 
-  note <- .axis_note(yl, pts)
+  # breaks only. scale_y_continuous(limits = ) would drop observations;
+  # the zooming is coord_cartesian()'s job, set above.
+  if (!is.null(brk)) {
+    g <- g + ggplot2::scale_y_continuous(breaks = brk)
+  }
+
+  note <- .axis_note(yl, pts, brk, mps)
   attr(g, "anova_note") <- note
   if (!quiet) message(note)
   g
@@ -327,7 +392,7 @@ anova_plot <- function(model, conf = 0.95, pooled = TRUE,
 
 #' Build the note explaining the axis and point decisions.
 #' @keywords internal
-.axis_note <- function(yl, pts) {
+.axis_note <- function(yl, pts, brk = NULL, mps = NULL) {
 
   fmt <- function(x) format(x, digits = 4, trim = TRUE)
 
@@ -349,6 +414,20 @@ anova_plot <- function(model, conf = 0.95, pooled = TRUE,
   if (!is.na(pts$why)) {
     parts <- c(parts, paste(strwrap(paste("Points:", pts$why), width = 76),
                             collapse = "\n"))
+  }
+
+  if (!is.null(brk) && length(brk) > 1) {
+    parts <- c(parts, paste(strwrap(sprintf(paste(
+      "Breaks: every point from %s to %s, since the scale is whole-numbered",
+      "and short enough to label in full."),
+      fmt(min(brk)), fmt(max(brk))), width = 76), collapse = "\n"))
+  }
+
+  if (!is.null(mps) && isTRUE(mps$reduced)) {
+    parts <- c(parts, paste(strwrap(sprintf(paste(
+      "Mean point: shrunk to %.1f because the widest CI spans only %.1f%% of",
+      "the axis, and a full-size point would cover it."),
+      mps$size, mps$frac * 100), width = 76), collapse = "\n"))
   }
 
   parts <- c(parts,

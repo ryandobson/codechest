@@ -10,6 +10,7 @@ anova_plot(
   pooled = TRUE,
   points = c("auto", "all", "none"),
   y_range = NULL,
+  y_breaks = NULL,
   title = NULL,
   xlab = NULL,
   ylab = NULL,
@@ -32,6 +33,10 @@ grows and dropping them past 500 per group; \code{"all"} always draws them;
 
 \item{y_range}{Two numbers giving the measurement scale, e.g. \code{c(1, 7)},
 used exactly. \code{NULL} (default) uses the data range plus 10\%.}
+
+\item{y_breaks}{Axis breaks. \code{NULL} (default) labels every point of a
+whole-numbered scale spanning 10 or less, e.g. every value of a 1-7
+Likert item, and otherwise leaves ggplot2's choice alone.}
 
 \item{title, xlab, ylab}{Passed to \code{labs()}; defaults come from the model.}
 

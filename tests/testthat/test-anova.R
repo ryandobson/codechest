@@ -684,3 +684,107 @@ test_that("anova_plot() still accepts every points spelling", {
     expect_s3_class(anova_plot(fit, points = pt, quiet = TRUE), "ggplot")
   }
 })
+
+
+# ---- axis breaks -----------------------------------------------------------
+
+test_that(".y_breaks() labels every point of a short whole-numbered scale", {
+  expect_equal(.y_breaks(c(3, 5, 7), y_range = c(1, 7)), 1:7)
+  expect_equal(.y_breaks(c(1, 2, 3), y_range = c(0, 10)), 0:10)
+})
+
+test_that(".y_breaks() leaves long or continuous scales to ggplot2", {
+  expect_null(.y_breaks(c(40, 70), y_range = c(0, 100)))    # 100 points is too many
+  expect_null(.y_breaks(c(1.5, 2.5), y_range = c(1.5, 7.5)))  # not whole numbers
+  expect_null(.y_breaks(c(3.59, 6.31)))                      # continuous, undeclared
+})
+
+test_that(".y_breaks() infers a discrete scale that was not declared", {
+  # forgetting y_range should still give sensible breaks for Likert-like data
+  expect_equal(.y_breaks(c(3, 4, 5, 6, 7)), 3:7)
+  expect_null(.y_breaks(seq(0, 100, by = 1)))               # whole, but too long
+})
+
+test_that("an explicit y_breaks overrides the inference", {
+  skip_if_not_installed("ggplot2")
+  set.seed(5)
+  lik <- data.frame(cond = factor(rep(c("a", "b"), each = 30)),
+                    rating = c(sample(3:6, 30, TRUE), sample(4:7, 30, TRUE)))
+  p <- anova_plot(aov(rating ~ cond, data = lik), y_range = c(1, 7),
+                  y_breaks = c(1, 4, 7), quiet = TRUE)
+  drawn <- ggplot2::ggplot_build(p)$layout$panel_params[[1]]$y$breaks
+  expect_true(all(c(1, 4, 7) %in% drawn))
+  expect_false(2 %in% drawn)
+})
+
+test_that("Likert breaks reach the panel, and continuous ones are untouched", {
+  skip_if_not_installed("ggplot2")
+  set.seed(5)
+  lik <- data.frame(cond = factor(rep(c("a", "b"), each = 30)),
+                    rating = c(sample(3:6, 30, TRUE), sample(4:7, 30, TRUE)))
+
+  drawn <- ggplot2::ggplot_build(
+    anova_plot(aov(rating ~ cond, data = lik), y_range = c(1, 7), quiet = TRUE)
+  )$layout$panel_params[[1]]$y$breaks
+  expect_true(all(1:7 %in% drawn))
+
+  # a continuous outcome keeps ggplot2's own choice
+  cont <- ggplot2::ggplot_build(
+    anova_plot(aov(weight ~ group, data = PlantGrowth), quiet = TRUE)
+  )$layout$panel_params[[1]]$y$breaks
+  expect_false(all(seq(3, 7) %in% stats::na.omit(cont)))
+})
+
+test_that("setting breaks does not drop observations", {
+  skip_if_not_installed("ggplot2")
+  set.seed(5)
+  lik <- data.frame(cond = factor(rep(c("a", "b"), each = 30)),
+                    rating = c(sample(3:6, 30, TRUE), sample(4:7, 30, TRUE)))
+  b <- ggplot2::ggplot_build(anova_plot(aov(rating ~ cond, data = lik),
+                                        y_range = c(1, 7), quiet = TRUE))
+  expect_gt(nrow(b$data[[1]]), 0)
+  expect_identical(nrow(b$data[[2]]), 60L)   # every observation still plotted
+})
+
+
+# ---- mean point size -------------------------------------------------------
+
+test_that("the mean point stays full size when the CI is visible", {
+  s <- .mean_point_size(ci_low = 4, ci_high = 6, ylim = c(0, 10))
+  expect_equal(s$size, 4)
+  expect_false(s$reduced)
+})
+
+test_that("the mean point shrinks when it would cover its own CI", {
+  # a CI spanning 1% of the axis would sit entirely under a size-4 point
+  s <- .mean_point_size(ci_low = 4.95, ci_high = 5.05, ylim = c(0, 10))
+  expect_lt(s$size, 4)
+  expect_true(s$reduced)
+  expect_gte(s$size, 1.5)          # floored, never invisible
+})
+
+test_that("mean point size is driven by the CI-to-axis ratio, not n alone", {
+  # same interval, wider axis -> smaller point
+  narrow <- .mean_point_size(4, 6, ylim = c(0, 10))
+  wide   <- .mean_point_size(4, 6, ylim = c(0, 500))
+  expect_gt(narrow$size, wide$size)
+})
+
+test_that(".mean_point_size() copes with a degenerate axis", {
+  s <- .mean_point_size(5, 5, ylim = c(5, 5))
+  expect_equal(s$size, 4)
+  expect_false(s$reduced)
+})
+
+test_that("anova_plot() shrinks the mean point at large n and says so", {
+  skip_if_not_installed("ggplot2")
+  set.seed(6)
+  big <- data.frame(g = factor(rep(c("a", "b"), each = 1200)),
+                    y = c(rnorm(1200, 10, 2), rnorm(1200, 10.6, 2)))
+  note <- attr(anova_plot(aov(y ~ g, data = big), quiet = TRUE), "anova_note")
+  expect_match(note, "Mean point: shrunk")
+
+  small <- attr(anova_plot(aov(weight ~ group, data = PlantGrowth), quiet = TRUE),
+                "anova_note")
+  expect_no_match(small, "Mean point: shrunk")
+})
