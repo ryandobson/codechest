@@ -42,9 +42,9 @@ out$nice_names
 
 }
 \seealso{
-Other renaming_helpers: 
-\code{\link{create_nice_name}()},
-\code{\link{rename_lmer}()},
-\code{\link{rename_lmers}()}
+Other renaming_helpers:
+\code{\link[=create_nice_name]{create_nice_name()}},
+\code{\link[=rename_lmer]{rename_lmer()}},
+\code{\link[=rename_lmers]{rename_lmers()}}
 }
 \concept{renaming_helpers}

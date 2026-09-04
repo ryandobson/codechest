@@ -21,15 +21,15 @@ Applies \code{.norm_fe_term()} to each element and returns unique normalized ter
  }
 }
 \seealso{
-Other print_helpers: 
-\code{\link{.diff_removed}()},
-\code{\link{.get_fixed}()},
-\code{\link{.model_info}()},
-\code{\link{.norm_fe_term}()},
-\code{\link{.re_corr_status}()},
-\code{\link{.re_terms_from_model}()},
-\code{\link{.step_label}()},
-\code{\link{.wrapcat}()},
-\code{\link{print.fixed_effect_drop_history}()}
+Other print_helpers:
+\code{\link[=.diff_removed]{.diff_removed()}},
+\code{\link[=.get_fixed]{.get_fixed()}},
+\code{\link[=.model_info]{.model_info()}},
+\code{\link[=.norm_fe_term]{.norm_fe_term()}},
+\code{\link[=.re_corr_status]{.re_corr_status()}},
+\code{\link[=.re_terms_from_model]{.re_terms_from_model()}},
+\code{\link[=.step_label]{.step_label()}},
+\code{\link[=.wrapcat]{.wrapcat()}},
+\code{\link[=print.fixed_effect_drop_history]{print.fixed_effect_drop_history()}}
 }
 \concept{print_helpers}

@@ -53,15 +53,15 @@ print(fed_hist)
 \seealso{
 \code{\link{fixed_effect_drops}}, \code{\link{final_model_fed}}
 
-Other print_helpers: 
-\code{\link{.diff_removed}()},
-\code{\link{.get_fixed}()},
-\code{\link{.model_info}()},
-\code{\link{.norm_fe_term}()},
-\code{\link{.norm_vec}()},
-\code{\link{.re_corr_status}()},
-\code{\link{.re_terms_from_model}()},
-\code{\link{.step_label}()},
-\code{\link{.wrapcat}()}
+Other print_helpers:
+\code{\link[=.diff_removed]{.diff_removed()}},
+\code{\link[=.get_fixed]{.get_fixed()}},
+\code{\link[=.model_info]{.model_info()}},
+\code{\link[=.norm_fe_term]{.norm_fe_term()}},
+\code{\link[=.norm_vec]{.norm_vec()}},
+\code{\link[=.re_corr_status]{.re_corr_status()}},
+\code{\link[=.re_terms_from_model]{.re_terms_from_model()}},
+\code{\link[=.step_label]{.step_label()}},
+\code{\link[=.wrapcat]{.wrapcat()}}
 }
 \concept{print_helpers}
