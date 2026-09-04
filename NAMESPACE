@@ -248,5 +248,6 @@ importFrom(tidyselect,
 )
 importFrom(utils,
   capture.output,
+  head,
   tail
 )

@@ -510,6 +510,7 @@ pub_cors_by <- function(data,
 #' top_cor_diff(m1, m2, groups = c("Study 1", "Study 2"), n = 5)
 #'
 #' @seealso [pub_cors_by()]
+#' @importFrom utils head
 #' @export
 
 top_cor_diff <- function(cor1, cor2, groups, n = 10, rnd = 2) {
