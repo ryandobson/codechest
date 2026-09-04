@@ -68,6 +68,65 @@ anova_means <- function(model, conf = 0.95, pooled = TRUE) {
 }
 
 
+
+# ---- theme handling --------------------------------------------------------
+
+#' Resolve the `theme` argument of the anova_* plot functions.
+#'
+#' Accepts a shorthand name, a theme-returning function, or a ggplot2 theme
+#' object, so `theme = ggplot2::theme_minimal()` works as readily as
+#' `theme = "dark"`.
+#'
+#' @keywords internal
+.anova_theme <- function(theme = c("jeremy", "dark", "gridline", "none"),
+                        base_size = 14) {
+
+  if (inherits(theme, "theme")) return(theme)
+  if (is.function(theme))       return(theme(base_size = base_size))
+
+  switch(match.arg(theme),
+    jeremy   = jermeys_theme(base_size = base_size),
+    dark     = theme_black(base_size = base_size),
+    gridline = gline_theme(base_size = base_size),
+    none     = NULL)
+}
+
+#' Is this theme a dark one?
+#'
+#' Geom colours are set in the plotting code, not by the theme, so a black
+#' panel would otherwise get black points drawn on it. This decides which
+#' palette to hand the geoms. A user-supplied theme object is inspected for a
+#' dark panel fill rather than assumed to be light.
+#'
+#' @keywords internal
+.is_dark_theme <- function(theme) {
+
+  if (is.character(theme)) return(identical(theme[1], "dark"))
+  if (is.function(theme))  return(identical(
+    tryCatch(theme()$panel.background$fill, error = function(e) NA), "black"))
+
+  if (inherits(theme, "theme")) {
+    fill <- tryCatch(theme$panel.background$fill, error = function(e) NA)
+    if (is.null(fill) || length(fill) != 1 || is.na(fill)) return(FALSE)
+    rgb <- tryCatch(grDevices::col2rgb(fill), error = function(e) NULL)
+    if (is.null(rgb)) return(FALSE)
+    return(mean(rgb) < 128)   # dark panel -> light ink
+  }
+  FALSE
+}
+
+#' Geom colours matched to a light or dark panel.
+#' @keywords internal
+.anova_palette <- function(dark = FALSE) {
+  if (dark) {
+    list(fill = "grey25", outline = "grey50", points = "grey75",
+         ink = "white", hist_fill = "steelblue4", box_fill = "grey30")
+  } else {
+    list(fill = "grey92", outline = "grey70", points = "grey40",
+         ink = "black", hist_fill = "lightblue", box_fill = "grey85")
+  }
+}
+
 # ---- the reporting figure --------------------------------------------------
 
 #' Violin, individual points, group mean, and confidence interval
@@ -82,6 +141,12 @@ anova_means <- function(model, conf = 0.95, pooled = TRUE) {
 #' @param points Draw individual observations. Turn off for large n.
 #' @param title,xlab,ylab Passed to `labs()`; defaults come from the model.
 #' @param seed Seed for the jitter, so the figure is reproducible.
+#' @param theme One of `"jeremy"` (default), `"dark"`, `"gridline"`, or
+#'   `"none"`; or any ggplot2 theme object or theme-returning function.
+#'   Geom colours follow the theme, so `"dark"` gets light points on a black
+#'   panel rather than black ones that vanish.
+#' @param base_size Base font size passed to the theme. Default `14`; the
+#'   themes themselves default to 24, which suits slides more than figures.
 #'
 #' @return A ggplot.
 #'
@@ -92,11 +157,14 @@ anova_means <- function(model, conf = 0.95, pooled = TRUE) {
 #' }
 #' @export
 anova_plot <- function(model, conf = 0.95, pooled = TRUE, points = TRUE,
-                       title = NULL, xlab = NULL, ylab = NULL, seed = 1) {
+                       title = NULL, xlab = NULL, ylab = NULL, seed = 1,
+                       theme = c("jeremy", "dark", "gridline", "none"),
+                       base_size = 14) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("anova_plot() needs ggplot2.", call. = FALSE)
   }
+  pal <- .anova_palette(.is_dark_theme(theme))
   p <- .model_parts(model)
   d <- data.frame(group = p$g, y = p$y)
   m <- anova_means(model, conf = conf, pooled = pooled)
@@ -104,31 +172,39 @@ anova_plot <- function(model, conf = 0.95, pooled = TRUE, points = TRUE,
   m$group <- factor(m$group, levels = levels(p$g))
 
   g <- ggplot2::ggplot(d, ggplot2::aes(x = .data$group, y = .data$y)) +
-    ggplot2::geom_violin(fill = "grey92", color = "grey70", width = 0.8)
+    ggplot2::geom_violin(fill = pal$fill, color = pal$outline, width = 0.8)
 
   if (points) {
     set.seed(seed)
     g <- g + ggplot2::geom_jitter(width = 0.08, alpha = 0.45, size = 2,
-                                  color = "grey40")
+                                  color = pal$points)
   }
 
   g +
     ggplot2::geom_errorbar(
       data = m,
       ggplot2::aes(x = .data$group, ymin = .data$ci_low, ymax = .data$ci_high),
-      width = 0.08, linewidth = 0.9, inherit.aes = FALSE) +
+      width = 0.08, linewidth = 0.9, colour = pal$ink, inherit.aes = FALSE) +
     ggplot2::geom_point(
       data = m, ggplot2::aes(x = .data$group, y = .data$mean),
-      size = 4, inherit.aes = FALSE) +
+      size = 4, colour = pal$ink, inherit.aes = FALSE) +
     ggplot2::labs(
       x = if (is.null(xlab)) p$g_name else xlab,
       y = if (is.null(ylab)) p$y_name else ylab,
       title = title,
-      caption = sprintf(
+      # wrapped: at larger base_size an unwrapped caption runs off the panel
+      caption = paste(strwrap(sprintf(
         "Large point = group mean, bars = %.0f%% CI (%s).%s",
         conf * 100, attr(m, "se_type"),
-        if (points) " Small points are individual observations." else "")
-    )
+        if (points) " Small points are individual observations." else ""),
+        width = 70), collapse = "
+")
+    ) +
+    .anova_theme(theme, base_size) +
+    # the themes do not style the caption, so on a dark panel it would
+    # inherit grey30 and disappear
+    ggplot2::theme(plot.caption = ggplot2::element_text(
+      colour = pal$ink, size = base_size * 0.6, hjust = 0))
 }
 
 
@@ -283,6 +359,9 @@ anova_workup <- function(object, data = NULL, id = NULL, plot = TRUE, ...) {
 #'
 #' @param x An `anova_check` object, or a fitted `aov()`/`lm()`.
 #' @param bins Bins for the residual histogram.
+#' @param theme One of `"jeremy"` (default), `"dark"`, `"gridline"`, or
+#'   `"none"`; or any ggplot2 theme object or theme-returning function.
+#' @param base_size Base font size passed to the theme. Default `14`.
 #'
 #' @return A named list of ggplots: `qq`, `residuals`, `boxplot`.
 #'
@@ -295,11 +374,15 @@ anova_workup <- function(object, data = NULL, id = NULL, plot = TRUE, ...) {
 #'
 #' @seealso [anova_check()], [anova_ref()] with `"normality"`.
 #' @export
-anova_check_plots <- function(x, bins = 12) {
+anova_check_plots <- function(x, bins = 12,
+                              theme = c("jeremy", "dark", "gridline", "none"),
+                              base_size = 14) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("anova_check_plots() needs ggplot2.", call. = FALSE)
   }
+  pal <- .anova_palette(.is_dark_theme(theme))
+  thm <- .anova_theme(theme, base_size)
 
   if (inherits(x, "anova_check")) {
     model  <- x$model
@@ -319,19 +402,20 @@ anova_check_plots <- function(x, bins = 12) {
   d   <- data.frame(resid = res, group = factor(mf[[2]]), y = mf[[1]])
 
   qq <- ggplot2::ggplot(d, ggplot2::aes(sample = .data$resid)) +
-    ggplot2::stat_qq() + ggplot2::stat_qq_line() +
+    ggplot2::stat_qq(colour = pal$ink) +
+    ggplot2::stat_qq_line(colour = pal$outline) +
     ggplot2::labs(x = "Theoretical quantile", y = "Sample quantile",
-                  title = "Q-Q plot of residuals")
+                  title = "Q-Q plot of residuals") + thm
 
   hist <- ggplot2::ggplot(d, ggplot2::aes(x = .data$resid)) +
-    ggplot2::geom_histogram(bins = bins, fill = "lightblue", color = "black") +
+    ggplot2::geom_histogram(bins = bins, fill = pal$hist_fill, color = pal$ink) +
     ggplot2::labs(x = "Residual", y = "Count",
-                  title = "Residuals from the model")
+                  title = "Residuals from the model") + thm
 
   box <- ggplot2::ggplot(d, ggplot2::aes(x = .data$group, y = .data$y)) +
-    ggplot2::geom_boxplot(fill = "grey85") +
+    ggplot2::geom_boxplot(fill = pal$box_fill, colour = pal$ink) +
     ggplot2::labs(x = g_name, y = y_name,
-                  title = "Spread within each condition")
+                  title = "Spread within each condition") + thm
 
   list(qq = qq, residuals = hist, boxplot = box)
 }

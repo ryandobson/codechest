@@ -280,18 +280,21 @@ anova_multi <- function(formula, data, contrast = NULL, decisions = NULL,
   res$ci_width <- res$ci_high - res$ci_low
 
   # The baseline specification: nothing transformed, pooled variance, OLS.
-  # Snapshot it only AFTER the derived columns exist, or base$sig is NULL and
-  # the comparison below silently collapses to logical(0).
+  # Work through its ROW INDEX, not a snapshot. A snapshot taken here would
+  # be missing every column added below, so mv$baseline$disagrees and
+  # mv$baseline$width_vs_base would come back NULL.
   is_base <- res$transform == "none" & res$variance == "pooled" &
              res$estimator == "ols"
   base_i <- if (any(is_base)) which(is_base)[1] else 1L
-  base   <- res[base_i, ]
 
-  res$disagrees <- res$ok & !is.na(res$sig) & !is.na(base$sig) &
-                   (res$sig != base$sig)
+  res$disagrees <- res$ok & !is.na(res$sig) & !is.na(res$sig[base_i]) &
+                   (res$sig != res$sig[base_i])
 
   # precision cost: CI width relative to the baseline specification
-  res$width_vs_base <- res$ci_width / base$ci_width
+  res$width_vs_base <- res$ci_width / res$ci_width[base_i]
+
+  # snapshot only now, with every derived column present
+  base <- res[base_i, ]
 
   structure(
     list(formula = formula, y_name = names(mf)[1], g_name = names(mf)[2],
@@ -372,14 +375,20 @@ print.anova_multiverse <- function(x, ...) {
 #'
 #' @param x An `anova_multiverse` object.
 #' @param title Optional plot title.
+#' @param theme One of `"jeremy"` (default), `"dark"`, `"gridline"`, or
+#'   `"none"`; or any ggplot2 theme object or theme-returning function.
+#' @param base_size Base font size passed to the theme. Default `14`.
 #'
 #' @return A ggplot.
 #' @export
-anova_multi_plot <- function(x, title = NULL) {
+anova_multi_plot <- function(x, title = NULL,
+                             theme = c("jeremy", "dark", "gridline", "none"),
+                             base_size = 14) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("anova_multi_plot() needs ggplot2.", call. = FALSE)
   }
+  dark <- .is_dark_theme(theme)
   r <- x$results[x$results$ok, , drop = FALSE]
   if (!nrow(r)) stop("No specifications were successfully fitted.", call. = FALSE)
 
@@ -395,13 +404,17 @@ anova_multi_plot <- function(x, title = NULL) {
 
   ggplot2::ggplot(r, ggplot2::aes(x = .data$est, y = .data$label,
                                   colour = .data$status)) +
-    ggplot2::geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
+    ggplot2::geom_vline(xintercept = 0, linetype = "dashed",
+                        colour = if (dark) "grey60" else "grey50") +
     ggplot2::geom_errorbar(ggplot2::aes(xmin = .data$ci_low, xmax = .data$ci_high),
                            orientation = "y", width = 0.25, linewidth = 0.7) +
     ggplot2::geom_point(ggplot2::aes(size = .data$disagrees)) +
     ggplot2::scale_size_manual(values = c(`TRUE` = 4, `FALSE` = 2.8),
                                guide = "none") +
-    ggplot2::scale_colour_manual(values = c(
+    ggplot2::scale_colour_manual(values = if (dark) c(
+      "significant"           = "grey90",
+      "not significant"       = "grey55",
+      "differs from baseline" = "#FF6B6B") else c(
       "significant"           = "grey20",
       "not significant"       = "grey60",
       "differs from baseline" = "#C1272D")) +
@@ -415,5 +428,12 @@ anova_multi_plot <- function(x, title = NULL) {
       caption = paste("Each row is one defensible analysis. Dashed line = no effect.",
                       "\nRows marked * disagree with the baseline on significance.")
     ) +
-    ggplot2::theme(legend.position = "top")
+    .anova_theme(theme, base_size) +
+    # the themes do not style the caption, so on a dark panel it would
+    # inherit grey30 and disappear
+    ggplot2::theme(
+      legend.position = "top",
+      plot.caption = ggplot2::element_text(
+        colour = if (dark) "white" else "black",
+        size = base_size * 0.6, hjust = 0))
 }

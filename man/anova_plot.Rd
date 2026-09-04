@@ -12,7 +12,9 @@ anova_plot(
   title = NULL,
   xlab = NULL,
   ylab = NULL,
-  seed = 1
+  seed = 1,
+  theme = c("jeremy", "dark", "gridline", "none"),
+  base_size = 14
 )
 }
 \arguments{
@@ -27,6 +29,14 @@ anova_plot(
 \item{title, xlab, ylab}{Passed to \code{labs()}; defaults come from the model.}
 
 \item{seed}{Seed for the jitter, so the figure is reproducible.}
+
+\item{theme}{One of \code{"jeremy"} (default), \code{"dark"}, \code{"gridline"}, or
+\code{"none"}; or any ggplot2 theme object or theme-returning function.
+Geom colours follow the theme, so \code{"dark"} gets light points on a black
+panel rather than black ones that vanish.}
+
+\item{base_size}{Base font size passed to the theme. Default \code{14}; the
+themes themselves default to 24, which suits slides more than figures.}
 }
 \value{
 A ggplot.

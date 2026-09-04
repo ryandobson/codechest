@@ -16,7 +16,8 @@ URL: https://github.com/ryandobson/codechest
 BugReports: https://github.com
 Suggests: 
     testthat (>= 3.0.0),
-    WRS2
+    WRS2,
+    car
 Config/testthat/edition: 3
 Imports: 
     dplyr,

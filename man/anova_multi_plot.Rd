@@ -4,12 +4,22 @@
 \alias{anova_multi_plot}
 \title{Forest plot of a multiverse analysis}
 \usage{
-anova_multi_plot(x, title = NULL)
+anova_multi_plot(
+  x,
+  title = NULL,
+  theme = c("jeremy", "dark", "gridline", "none"),
+  base_size = 14
+)
 }
 \arguments{
 \item{x}{An \code{anova_multiverse} object.}
 
 \item{title}{Optional plot title.}
+
+\item{theme}{One of \code{"jeremy"} (default), \code{"dark"}, \code{"gridline"}, or
+\code{"none"}; or any ggplot2 theme object or theme-returning function.}
+
+\item{base_size}{Base font size passed to the theme. Default \code{14}.}
 }
 \value{
 A ggplot.

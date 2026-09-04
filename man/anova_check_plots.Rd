@@ -4,12 +4,22 @@
 \alias{anova_check_plots}
 \title{Diagnostic plots for an assumption check}
 \usage{
-anova_check_plots(x, bins = 12)
+anova_check_plots(
+  x,
+  bins = 12,
+  theme = c("jeremy", "dark", "gridline", "none"),
+  base_size = 14
+)
 }
 \arguments{
 \item{x}{An \code{anova_check} object, or a fitted \code{aov()}/\code{lm()}.}
 
 \item{bins}{Bins for the residual histogram.}
+
+\item{theme}{One of \code{"jeremy"} (default), \code{"dark"}, \code{"gridline"}, or
+\code{"none"}; or any ggplot2 theme object or theme-returning function.}
+
+\item{base_size}{Base font size passed to the theme. Default \code{14}.}
 }
 \value{
 A named list of ggplots: \code{qq}, \code{residuals}, \code{boxplot}.
