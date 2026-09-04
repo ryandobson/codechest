@@ -926,3 +926,119 @@ test_that("the mean and its interval stay in the theme ink, not the group colour
   expect_true(all(light$data[[length(light$data)]]$colour == "black"))
   expect_true(all(dark$data[[length(dark$data)]]$colour == "white"))
 })
+
+
+# ---- set_var_labels() / var_labels() ---------------------------------------
+
+test_that("set_var_labels() attaches plain base R attributes", {
+  d <- set_var_labels(PlantGrowth,
+                      weight = "Dried plant weight (g)",
+                      group  = "Treatment condition")
+
+  expect_identical(attr(d$weight, "label"), "Dried plant weight (g)")
+  expect_identical(attr(d$group,  "label"), "Treatment condition")
+  # no class was added; it is still a plain numeric
+  expect_identical(class(d$weight), "numeric")
+  expect_false(inherits(d$weight, "haven_labelled"))
+  expect_equal(as.vector(d$weight), PlantGrowth$weight)
+})
+
+test_that("labels can be supplied as a vector, and ... wins a clash", {
+  lab <- c(weight = "From the vector", group = "Treatment condition")
+  a <- set_var_labels(PlantGrowth, labels = lab)
+  expect_identical(attr(a$weight, "label"), "From the vector")
+
+  b <- set_var_labels(PlantGrowth, labels = lab, weight = "From the dots")
+  expect_identical(attr(b$weight, "label"), "From the dots")
+  expect_identical(attr(b$group,  "label"), "Treatment condition")
+})
+
+test_that("set_var_labels() validates its input", {
+  expect_error(set_var_labels(1:5, a = "x"), "must be a data frame")
+  expect_error(set_var_labels(PlantGrowth, "unnamed"), "must be named")
+  expect_error(set_var_labels(PlantGrowth, weight = c("a", "b")),
+               "single string")
+  expect_error(set_var_labels(PlantGrowth, weight = 42), "single string")
+  expect_error(set_var_labels(PlantGrowth, labels = c("no name")),
+               "named vector")
+})
+
+test_that("set_var_labels() warns about columns that are not there", {
+  expect_warning(set_var_labels(PlantGrowth, nope = "x"), "ignored: nope")
+  expect_no_warning(set_var_labels(PlantGrowth, nope = "x", warn_missing = FALSE))
+  # the real columns are still labelled despite the bad one
+  d <- suppressWarnings(
+    set_var_labels(PlantGrowth, nope = "x", weight = "Weight"))
+  expect_identical(attr(d$weight, "label"), "Weight")
+})
+
+test_that("set_var_labels() with nothing to do returns the frame unchanged", {
+  expect_identical(set_var_labels(PlantGrowth), PlantGrowth)
+})
+
+test_that("var_labels() reads them back, one element per column", {
+  d <- set_var_labels(PlantGrowth, weight = "Dried plant weight (g)")
+  v <- var_labels(d)
+
+  expect_length(v, ncol(d))
+  expect_named(v, names(d))
+  expect_identical(unname(v["weight"]), "Dried plant weight (g)")
+  expect_identical(unname(v["group"]), "group")        # falls back to the name
+})
+
+test_that('var_labels(missing = "na") shows what still needs labelling', {
+  d <- set_var_labels(PlantGrowth, weight = "Dried plant weight (g)")
+  v <- var_labels(d, missing = "na")
+  expect_true(is.na(v[["group"]]))
+  expect_identical(names(which(is.na(v))), "group")
+})
+
+test_that("var_labels() ignores unusable label attributes", {
+  d <- PlantGrowth
+  attr(d$weight, "label") <- ""            # empty
+  attr(d$group,  "label") <- c("a", "b")   # not length 1
+  v <- var_labels(d, missing = "na")
+  expect_true(all(is.na(v)))
+})
+
+test_that("var_labels() validates its input", {
+  expect_error(var_labels(1:5), "must be a data frame")
+})
+
+
+# ---- labels reach the plots ------------------------------------------------
+
+test_that("set_var_labels() feeds anova_plot() without haven", {
+  skip_if_not_installed("ggplot2")
+  d <- set_var_labels(PlantGrowth,
+                      weight = "Dried plant weight (g)",
+                      group  = "Treatment condition")
+  p <- anova_plot(aov(weight ~ group, data = d), quiet = TRUE)
+  expect_identical(p$labels$y, "Dried plant weight (g)")
+  expect_identical(p$labels$x, "Treatment condition")
+})
+
+test_that("labels survive the operations documented as safe", {
+  skip_if_not_installed("dplyr")
+  d <- set_var_labels(PlantGrowth, weight = "W")
+  keep <- function(x) identical(attr(x, "label"), "W")
+
+  expect_true(keep(dplyr::filter(d, weight > 4)$weight))
+  expect_true(keep(dplyr::arrange(d, weight)$weight))
+  expect_true(keep(dplyr::mutate(d, z = 1)$weight))
+  expect_true(keep(dplyr::select(d, weight)$weight))
+  expect_true(keep(rbind(d, d)$weight))
+  expect_true(keep(stats::model.frame(aov(weight ~ group, data = d))[[1]]))
+
+  f <- tempfile(fileext = ".rds"); on.exit(unlink(f))
+  saveRDS(d, f)
+  expect_true(keep(readRDS(f)$weight))
+})
+
+test_that("base R row subsetting drops labels, as documented", {
+  # this is the surprising one, and the reason it is written down
+  d <- set_var_labels(PlantGrowth, weight = "W")
+  expect_null(attr(d[1:10, ]$weight, "label"))
+  expect_null(attr(subset(d, weight > 4)$weight, "label"))
+  expect_null(attr(c(d$weight, 1), "label"))
+})
