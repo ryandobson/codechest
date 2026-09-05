@@ -1042,3 +1042,49 @@ test_that("base R row subsetting drops labels, as documented", {
   expect_null(attr(subset(d, weight > 4)$weight, "label"))
   expect_null(attr(c(d$weight, 1), "label"))
 })
+
+
+# ---- printed output respects the console width -----------------------------
+
+test_that(".anova_wrap() follows getOption(width) within sane bounds", {
+  withr_w <- function(w, f) { old <- options(width = w); on.exit(options(old)); f() }
+  expect_identical(withr_w(76, .anova_wrap), 76L)
+  expect_identical(withr_w(80, .anova_wrap), 80L)
+  expect_identical(withr_w(20, .anova_wrap), 56L)    # floored
+  expect_identical(withr_w(200, .anova_wrap), 90L)   # capped
+})
+
+test_that("printed output does not overflow the console width", {
+  # a line longer than the width wraps in a terminal and forces a scrollbar in
+  # a rendered document, which is what this guards against
+  longest <- function(expr, w) {
+    old <- options(width = w); on.exit(options(old))
+    txt <- utils::capture.output(expr)
+    txt <- txt[nzchar(trimws(txt))]
+    if (length(txt)) max(nchar(txt)) else 0L
+  }
+
+  fit <- aov(weight ~ group, data = PlantGrowth)
+  chk <- anova_check(fit)
+
+  for (w in c(76, 80, 100)) {
+    expect_lte(longest(print(chk), w), min(w, 90),
+               label = paste("anova_check at width", w))
+  }
+})
+
+test_that("the finding row fits even with the longest label", {
+  # "Independence between subjects" is 29 characters and used to push the row
+  # past 80, where it wrapped
+  labs <- c("Normality of residuals", "Independence between subjects")
+  old <- options(width = 80); on.exit(options(old))
+  cols <- .finding_cols(labs)
+  expect_lte(2 + cols$lab + 1 + cols$stat + 1 + cols$tag, 80)
+  expect_true(cols$fits)
+})
+
+test_that("a narrow console stacks the finding row rather than overflowing", {
+  old <- options(width = 56); on.exit(options(old))
+  cols <- .finding_cols(c("Independence between subjects"))
+  expect_false(cols$fits)     # not enough room for three columns
+})

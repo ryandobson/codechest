@@ -13,6 +13,52 @@
 # ============================================================
 
 
+# ---- output width -----------------------------------------------------------
+#
+# Every wrapped block in this package comes through .anova_wrap() and
+# .cat_wrapped(), so paragraphs share a right edge instead of each ending
+# wherever its own hard-coded width happened to fall.
+#
+# The width follows getOption("width"), so it adapts to a narrow console
+# and to a knitr chunk, and is capped so it never runs off the page of a
+# rendered document.
+
+#' Right edge for printed output.
+#' @keywords internal
+.anova_wrap <- function() {
+  w <- getOption("width", 80L)
+  if (!is.numeric(w) || !is.finite(w)) w <- 80L
+  as.integer(max(56L, min(as.integer(w), 90L)))
+}
+
+#' Print text wrapped to the shared width, at a given indent.
+#' @keywords internal
+.cat_wrapped <- function(text, indent = 6L) {
+  pad <- strrep(" ", indent)
+  for (ln in strwrap(text, width = .anova_wrap() - indent)) {
+    cat(pad, ln, "\n", sep = "")
+  }
+  invisible(NULL)
+}
+
+#' Column layout for a finding row, sized so nothing overflows the width.
+#'
+#' "Independence between subjects" is 29 characters, so a 26-wide label
+#' column pushed that row past 80 and it wrapped in a terminal. The widths
+#' are derived rather than guessed.
+#'
+#' @param labels The finding labels that will actually be printed.
+#' @keywords internal
+.finding_cols <- function(labels) {
+  total <- .anova_wrap()
+  lab   <- max(nchar(labels))
+  tag   <- 12L                       # "not testable", the longest tag
+  # what is left for the statistic once the label and tag are placed
+  stat  <- total - 2L - lab - 1L - 1L - tag
+  list(lab = lab, stat = max(stat, 0L), tag = tag,
+       fits = stat >= 18L)
+}
+
 # ---- Layer 3: findings -----------------------------------------------------
 
 #' Construct a finding.
@@ -650,6 +696,8 @@ print.anova_check <- function(x, verbosity = c("long", "short"), ...) {
                 if (x$context$balanced) "balanced" else "UNBALANCED"))
   }
 
+  cols <- .finding_cols(vapply(x$findings, function(f) f$label, character(1)))
+
   for (f in x$findings) {
     stat <- if (is.na(f$statistic)) {
       ""
@@ -659,26 +707,37 @@ print.anova_check <- function(x, verbosity = c("long", "short"), ...) {
     } else {
       sprintf("%s = %.3f, p %s", f$stat_name, f$statistic, .p_phrase(f$p))
     }
-    cat(sprintf("  %-26s %-34s %s\n", f$label, stat, .severity_tag(f$severity)))
-    if (!is.na(f$detail)) {
-      for (ln in strwrap(f$detail, width = 62)) cat("      ", ln, "\n", sep = "")
+    if (cols$fits) {
+      cat(sprintf(paste0("  %-", cols$lab, "s %-", cols$stat, "s %s\n"),
+                  f$label, stat, .severity_tag(f$severity)))
+    } else {
+      # too narrow for three columns; stack rather than overflow
+      cat(sprintf("  %s  %s\n", f$label, .severity_tag(f$severity)))
+      if (nzchar(stat)) cat("      ", stat, "\n", sep = "")
     }
+    if (!is.na(f$detail)) .cat_wrapped(f$detail, indent = 6L)
   }
 
   if (!is.null(x$recommendation)) {
     cat("\n", strrep("-", nchar(title)), "\n", sep = "")
     cat("\n  RECOMMENDED NEXT STEP\n\n")
-    for (ln in strwrap(x$recommendation$what, width = 68)) cat("    ", ln, "\n", sep = "")
+    .cat_wrapped(x$recommendation$what, indent = 4L)
     if (verbosity == "long") {
       cat("\n")
-      for (ln in strwrap(x$recommendation$why, width = 68)) cat("      ", ln, "\n", sep = "")
-      cat("\n    See: ", paste(x$recommendation$cite, collapse = ", "),
-          "\n    (anova_ref(\"", x$recommendation$cite[1],
-          "\") for the citation and reasoning)\n", sep = "")
+      .cat_wrapped(x$recommendation$why, indent = 6L)
+      cat("\n")
+      .cat_wrapped(paste("See:",
+                         paste(x$recommendation$cite, collapse = ", ")),
+                   indent = 4L)
+      .cat_wrapped(sprintf("anova_ref(\"%s\") for the citation and reasoning",
+                           x$recommendation$cite[1]), indent = 4L)
     }
   }
 
-  cat("\n  anova_check_plots() for the Q-Q, residual histogram, and boxplot.\n\n")
+  cat("\n")
+  .cat_wrapped("anova_check_plots() for the Q-Q, residual histogram, and boxplot.",
+               indent = 2L)
+  cat("\n")
   invisible(x)
 }
 

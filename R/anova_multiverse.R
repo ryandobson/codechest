@@ -325,17 +325,23 @@ print.anova_multiverse <- function(x, ...) {
               nrow(x$results), x$n_skipped))
 
   r <- x$results
-  cat(sprintf("  %-26s %8s %8s %9s %8s %7s\n",
-              "specification", "d", "p", "omnibus p", "effect", "CI vs base"))
-  cat("  ", strrep("-", 70), "\n", sep = "")
+  # size the label column from the widest label actually present, so a
+  # custom decision set does not push the table past the right edge
+  w   <- max(nchar(r$label), nchar("specification"))
+  fmt <- paste0("  %-", w, "s %8s %8s %9s %8s %7s\n")
+  cat(sprintf(fmt, "specification", "d", "p", "omnibus p", "effect",
+              "CI vs base"))
+  cat("  ", strrep("-", min(.anova_wrap() - 2L, w + 47L)), "\n", sep = "")
 
   for (i in seq_len(nrow(r))) {
     if (!r$ok[i]) {
-      cat(sprintf("  %-26s   skipped: %s\n", r$label[i], r$why[i]))
+      cat(sprintf(paste0("  %-", w, "s   skipped: %s\n"), r$label[i], r$why[i]))
       next
     }
-    flag <- if (isTRUE(r$disagrees[i])) " <-- differs" else ""
-    cat(sprintf("  %-26s %8.2f %8s %9s %8.3f %6.2fx%s\n",
+    # a short marker: " <-- differs" pushed the row past the right edge.
+    # The legend under the table says what it means.
+    flag <- if (isTRUE(r$disagrees[i])) " *" else ""
+    cat(sprintf(paste0("  %-", w, "s %8.2f %8s %9s %8.3f %6.2fx%s\n"),
                 r$label[i], r$est[i], .p_phrase(r$p_contrast[i]),
                 .p_phrase(r$p_omnibus[i]), r$effect[i],
                 r$width_vs_base[i], flag))
@@ -343,20 +349,26 @@ print.anova_multiverse <- function(x, ...) {
 
   cat("\n")
   if (x$n_disagree == 0) {
-    cat("  Every fitted specification agrees with the baseline on significance\n")
-    cat("  at alpha = ", x$alpha, ". The conclusion does not hinge on these\n", sep = "")
-    cat("  analysis decisions, which is what you want to be able to say.\n")
+    .cat_wrapped(sprintf(paste(
+      "Every fitted specification agrees with the baseline on significance",
+      "at alpha = %s. The conclusion does not hinge on these analysis",
+      "decisions, which is what you want to be able to say."), x$alpha),
+      indent = 2L)
   } else {
-    cat("  ", x$n_disagree, " specification(s) disagree with the baseline on\n", sep = "")
-    cat("  significance. Field and Wilcox: where models deviate, report the\n")
-    cat("  robust one unless there is an evidence-based case that the\n")
-    cat("  assumptions were met. Do not pick the one you liked.\n")
+    .cat_wrapped(sprintf(paste(
+      "* marks the %d specification(s) that disagree with the baseline on",
+      "significance. Field and Wilcox: where models deviate, report the",
+      "robust one unless there is an evidence-based case that the",
+      "assumptions were met. Do not pick the one you liked."),
+      x$n_disagree), indent = 2L)
   }
 
   if (any(r$effect_type == "xi", na.rm = TRUE)) {
-    cat("\n  NOTE: effect is omega^2 for OLS rows and xi (explanatory measure)\n")
-    cat("  for trimmed rows. They are not the same quantity; compare within\n")
-    cat("  estimator, not across.\n")
+    cat("\n")
+    .cat_wrapped(paste(
+      "NOTE: effect is omega^2 for OLS rows and xi (explanatory measure) for",
+      "trimmed rows. They are not the same quantity; compare within",
+      "estimator, not across."), indent = 2L)
   }
   if (any(!r$ok & grepl("WRS2", r$why))) {
     cat("\n  Robust specifications were skipped. install.packages(\"WRS2\")\n")

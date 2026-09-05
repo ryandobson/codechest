@@ -26,6 +26,11 @@ knitr:
 #| include: false
 library(codechest)
 library(ggplot2)
+
+# One console width for the whole document. The printed output wraps to
+# getOption("width"), so setting it here keeps every block sharing a right
+# edge instead of each ending wherever R happened to default.
+options(width = 76)
 ```
 
 ## The idea in three sentences
@@ -313,7 +318,8 @@ analyzing data: A model comparison perspective* (3rd ed.). Taylor & Francis.
 ```{r}
 #| label: textbook
 #| echo: false
-cat(anova_textbook())
+cat(strwrap(anova_textbook(), width = 73), sep = "
+")
 ```
 
 Every other reference the package relies on is in the registry; `anova_ref()`

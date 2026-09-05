@@ -451,10 +451,10 @@ anova_plot <- function(model, conf = 0.95, pooled = TRUE,
             round(yl$pad * 100))
   }
 
-  parts <- c(paste(strwrap(axis_line, width = 76), collapse = "\n"))
+  parts <- c(paste(strwrap(axis_line, width = .anova_wrap()), collapse = "\n"))
 
   if (!is.na(pts$why)) {
-    parts <- c(parts, paste(strwrap(paste("Points:", pts$why), width = 76),
+    parts <- c(parts, paste(strwrap(paste("Points:", pts$why), width = .anova_wrap()),
                             collapse = "\n"))
   }
 
@@ -462,14 +462,14 @@ anova_plot <- function(model, conf = 0.95, pooled = TRUE,
     parts <- c(parts, paste(strwrap(sprintf(paste(
       "Breaks: every point from %s to %s, since the scale is whole-numbered",
       "and short enough to label in full."),
-      fmt(min(brk)), fmt(max(brk))), width = 76), collapse = "\n"))
+      fmt(min(brk)), fmt(max(brk))), width = .anova_wrap()), collapse = "\n"))
   }
 
   if (!is.null(mps) && isTRUE(mps$reduced)) {
     parts <- c(parts, paste(strwrap(sprintf(paste(
       "Mean point: shrunk to %.1f because the widest CI spans only %.1f%% of",
       "the axis, and a full-size point would cover it."),
-      mps$size, mps$frac * 100), width = 76), collapse = "\n"))
+      mps$size, mps$frac * 100), width = .anova_wrap()), collapse = "\n"))
   }
 
   parts <- c(parts,
