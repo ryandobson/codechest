@@ -146,6 +146,18 @@
   is_group_match <- function() {
     if (is.null(groups_to_fix)) return(FALSE)
     if (is.numeric(groups_to_fix)) return(block_id %in% groups_to_fix)
+    # A single-block model has no group name to match against. Comparing
+    # against NULL yields logical(0), which turns the caller's && into NA
+    # and errors with "missing value where TRUE/FALSE needed"; saying so
+    # plainly is more use than either that or silently leaving the
+    # parameter free, which would quietly leave the model unidentified.
+    if (is.null(group_name) || !length(group_name) || is.na(group_name)) {
+      stop("`groups_to_fix` was supplied as group names, but this block has ",
+           "no group name to match against. Group-based fixing needs a ",
+           "grouped model (type = \"groups\"); for an ungrouped model use ",
+           "\"first_one\"/\"first_zero\" or \"all_one\"/\"all_zero\" instead.",
+           call. = FALSE)
+    }
     trimws(group_name) %in% trimws(as.character(groups_to_fix))
   }
 
@@ -630,6 +642,14 @@
 #'   unordered pair.
 #' @keywords internal
 .make_factor_pairs <- function(factors) {
+  # combn() over a vector holding the same name twice yields a self-pair
+  # like (x1, x1), which downstream reads as a covariance between an item
+  # and itself and would strip that item's residual variance line.
+  factors <- unique(factors)
+  if (length(factors) < 2L) {
+    return(data.frame(lhs = character(0), rhs = character(0),
+                      stringsAsFactors = FALSE))
+  }
   cmb <- utils::combn(factors, 2)
   data.frame(
     lhs = cmb[1, ],

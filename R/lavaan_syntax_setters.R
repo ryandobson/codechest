@@ -317,6 +317,15 @@ set_item_covariances <- function(model_string,
                                  free_pairs = NULL,
                                  label_prefix = "c") {
 
+  # Pairs are carried as names -> values, so an unnamed vector has no left
+  # side at all. Caught here because the failure would otherwise surface
+  # from data.frame() as "differing number of rows: 0, 2".
+  if (length(item_covars) && is.null(names(item_covars))) {
+    stop("[set_item_covariances] `item_covars` must be a named vector of ",
+         "item pairs, e.g. c(x1 = \"x2\") to covary x1 with x2.",
+         call. = FALSE)
+  }
+
   covar_items <- unique(c(names(item_covars), as.character(item_covars)))
 
   missing_items <- setdiff(covar_items, items)

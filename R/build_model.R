@@ -149,7 +149,12 @@ build_model <- function(factors,
                         ),
                         verbose = FALSE) {
 
-  all_items    <- do.call(c, factors)
+  # Deduplicated: a cross-loading item appears under every factor it loads
+  # on, and all_items is used to decide which covariance lines to clear.
+  # Leaving duplicates in makes .make_factor_pairs() emit self-pairs like
+  # (x1, x1), which then match — and silently delete — that item's residual
+  # variance line.
+  all_items    <- unique(do.call(c, factors))
   factor_names <- names(factors)
 
   # Per-factor options may arrive as a scalar, a named vector, or a named
@@ -241,9 +246,14 @@ build_model <- function(factors,
          call. = FALSE)
   } else if (!is.null(factor_ids) &&
              length(factor_names) != length(factor_ids)) {
-    warning("You provided a character vector of 'factor_ids', but its length ",
-            "did not match the number of factors. Factor prefixes may be ",
-            "incorrect.", call. = FALSE)
+    # This has to be fatal. Indexing past the end yields NA, and every
+    # factor that falls off the end gets the same "NA" prefix, so two
+    # factors end up sharing labels — which lavaan reads as an equality
+    # constraint between them. The model fits and says nothing.
+    stop("You provided ", length(factor_ids), " 'factor_ids' for ",
+         length(factor_names), " factors. Supply one prefix per factor, ",
+         "or leave 'factor_ids' NULL to have them generated.",
+         call. = FALSE)
   }
 
   parser <- switch(

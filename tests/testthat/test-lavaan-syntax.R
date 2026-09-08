@@ -290,3 +290,74 @@ test_that("freeing a loading actually relaxes the cross-group constraint", {
   expect_lte(lavaan::fitMeasures(f_par, "chisq"),
              lavaan::fitMeasures(f_con, "chisq") + 1e-6)
 })
+
+
+# ---- regressions ------------------------------------------------------------
+#
+# Each of these pins a bug that shipped in the first version of this file.
+# The residual one is the reason they exist: cross-loading was tested, and
+# item covariances were tested, but never the two together, which is the
+# combination that broke.
+
+test_that("cross-loading items keep their residuals when item_covars is set", {
+  # all_items held each shared item twice, so .make_factor_pairs() emitted
+  # self-pairs like (x1, x1) and .remove_covariances() deleted every
+  # residual variance line. lavaan then free-estimates them, so the model
+  # still fits and the lost constraints are invisible.
+  ms <- suppressWarnings(build_model(
+    factors     = list(g  = c("x1", "x2", "x3", "x4"),
+                       s1 = c("x1", "x2"),
+                       s2 = c("x3", "x4")),
+    item_covars = c(x1 = "x2")))
+
+  lines <- strsplit(ms, "\n")[[1]]
+  for (it in c("x1", "x2", "x3", "x4")) {
+    expect_length(grep(paste0("^\\s*", it, " ~~ .*\\*", it, "\\s*$"), lines), 1L)
+  }
+  # and the requested covariance is still written
+  expect_match(ms, "x1 ~~ .*x2")
+})
+
+test_that(".make_factor_pairs() never pairs a name with itself", {
+  pairs <- .make_factor_pairs(c("x1", "x2", "x1"))
+  expect_false(any(pairs$lhs == pairs$rhs))
+  expect_identical(nrow(pairs), 1L)
+
+  expect_identical(nrow(.make_factor_pairs(c("x1", "x1"))), 0L)
+})
+
+test_that("factor_ids must cover every factor", {
+  # a short vector used to index past the end, giving two factors the same
+  # NA-prefixed labels, which lavaan reads as an equality constraint
+  expect_error(
+    suppressWarnings(build_model(
+      factors    = list(f1 = c("x1", "x2"), f2 = c("y1", "y2"),
+                        f3 = c("z1", "z2")),
+      factor_ids = c("a_"))),
+    "one prefix per factor")
+})
+
+test_that("named groups_to_fix on an ungrouped model explains itself", {
+  # previously died on "missing value where TRUE/FALSE needed"
+  expect_error(
+    suppressWarnings(build_model(
+      factors = list(f1 = c("x1", "x2", "x3")),
+      type = "single", variances_mode = "groups_one",
+      var_groups_to_fix = "a")),
+    "needs a grouped model")
+
+  expect_error(
+    suppressWarnings(build_model(
+      factors = list(f1 = c("x1", "x2", "x3")),
+      type = "single", means_mode = "groups_zero",
+      mean_groups_to_fix = "a")),
+    "needs a grouped model")
+})
+
+test_that("unnamed item_covars is rejected with a usable message", {
+  expect_error(
+    set_item_covariances("f1 =~ x1 + x2 + x3", parse_single_block,
+                         items = c("x1", "x2", "x3"),
+                         item_covars = c("x1", "x2")),
+    "must be a named vector")
+})

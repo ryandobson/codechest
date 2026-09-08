@@ -319,6 +319,12 @@ tidy_scale_reliabilities <- function(scale_reliabilities_output, rnd = 2) {
 #' @noRd
 .detect_general_factor <- function(loadings, factors) {
 
+  if (!length(factors)) {
+    stop("No latent factors found in `fit`; omega_specific() needs a ",
+         "bifactor model with a general factor and at least one specific ",
+         "factor.", call. = FALSE)
+  }
+
   if (length(factors) < 2L) {
     stop("Only one latent factor ('", factors[1], "') found in `fit`; a ",
          "bifactor model needs a general factor plus at least one specific ",
